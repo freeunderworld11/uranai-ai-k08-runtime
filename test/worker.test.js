@@ -10,6 +10,12 @@ after(async()=>{await worker?.stop();});
 const input={jd_ut:2451545,latitude:35.6762,longitude:139.6503};
 const call=(body=input)=>worker.fetch('/calculate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
 const callK02=body=>worker.fetch('/calculate/k02',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+test('explicit K02 range runs in Workers without selecting a birth instant',async()=>{
+ const input={k02:{...k02,TIME_PRECISION:'UNKNOWN',UTC_DATETIME:null},start_utc:'2000-01-01T00:00:00Z',end_utc:'2000-01-02T00:00:00Z'};
+ const r=await worker.fetch('/calculate/k02/range',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(input)});
+ assert.equal(r.status,200);const b=await r.json();assert.equal(b.sample_count,289);assert.equal(b.positions.length,10);assert.deepEqual(b.input_echo,input);
+ assert.equal(b.jd_ut,undefined);assert.equal(b.houses.asc_status,'UNAVAILABLE');assert.ok(b.positions.every(p=>p.SIGN_STABLE_WITHOUT_TIME!==true));
+});
 test('K02 UTC conversion matches JD and supports planets without geography',async()=>{
  const r=await callK02(k02);assert.equal(r.status,200);const b=await r.json();
  assert.equal(b.jd_ut,2451545);assert.deepEqual(b.input_echo,k02);assert.equal(b.valid_planet_count,10);

@@ -5,6 +5,20 @@ import moon from '../.generated/ephe/semo_18.se1';
 import asteroids from '../.generated/ephe/seas_18.se1';
 import { calculateWith, CalculationError } from './calculation.js';
 import {adaptK02} from './k02-adapter.js';
+import {adaptRange,calculateRangeWith} from './time-range.js';
+export async function calculateK02Range(input) {
+  const gate=adaptRange(input);
+  if(gate.result_status==='UNAVAILABLE')return gate;
+  let swe;
+  try {
+    swe=await createSwissEph();
+    swe.mountEphemeris({'sepl_18.se1':planets,'semo_18.se1':moon,'seas_18.se1':asteroids});
+    return calculateRangeWith(swe,gate);
+  } catch(error) {
+    if(error instanceof CalculationError)throw error;
+    throw new CalculationError('RUNTIME_UNAVAILABLE',503);
+  } finally {swe?.dispose();}
+}
 export async function calculateK02(source) {
   const gate=adaptK02(source);
   if(!gate.utc_parts)return {result_status:'UNAVAILABLE',input_contract:'K02_TO_K08_ASTRO_TIME_GEO_v1',...gate};
