@@ -11,7 +11,7 @@ const input={jd_ut:2451545,latitude:35.6762,longitude:139.6503};
 const call=(body=input)=>worker.fetch('/calculate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
 const callK02=body=>worker.fetch('/calculate/k02',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
 const planetCore=positions=>positions.map(p=>Object.fromEntries(Object.entries(p).filter(([k])=>!k.startsWith('house'))));
-for(const caseName of ['case-a','case-b','case-c','case-d'])test(`K19 ${caseName} fixed K02 input matches native planets, angles, cusps and all aspect states`,async()=>{
+for(const caseName of ['case-a','case-b','case-c','case-d','case-e-before','case-e-after'])test(`K19 ${caseName} fixed K02 input matches native planets, angles, cusps and all aspect states`,async()=>{
  const f=JSON.parse(readFileSync(new URL(`./fixtures/${caseName}.json`,import.meta.url),'utf8'));
  const response=await callK02(f.input);assert.equal(response.status,200);
  const b=await response.json(),e=f.expected,t=f.tolerance;
@@ -21,7 +21,8 @@ for(const caseName of ['case-a','case-b','case-c','case-d'])test(`K19 ${caseName
   assert.ok(Math.min(difference,360-difference)<=tolerance,label);
  };
  assert.deepEqual(b.input_echo,f.input);assert.equal(b.jd_ut,e.jd_ut);
- assert.equal(b.positions.length,10);assert.equal(b.result_status,'COMPLETE');
+ assert.equal(b.positions.length,10);assert.equal(b.result_status,caseName.startsWith('case-e')?'PARTIAL':'COMPLETE');
+ if(caseName.startsWith('case-e')){assert.equal(b.time_status,'CONDITIONAL');assert.ok(b.limitations.includes('HISTORICAL_TIME_CONDITIONAL'));}
  for(const [body,p] of Object.entries(e.planets)){
   const actual=b.positions.find(v=>v.body===body);assert.equal(actual.status,'VALID');
   angle(actual.longitude,p.longitude,t.longitude_degrees,body+' longitude');
@@ -34,6 +35,13 @@ for(const caseName of ['case-a','case-b','case-c','case-d'])test(`K19 ${caseName
  assert.deepEqual(b.aspects.pairs.map(p=>({body_a:p.body_a,body_b:p.body_b,status:p.status,aspect:p.aspect??null})),e.aspects);
  assert.equal(b.K08_AUDIT.ASPECT_45_PAIRS_VALID,true);
  assert.equal(b.K08_AUDIT.REGRESSION_SUITE_VALID,null);assert.equal(b.K09_USAGE_STATUS,'LOCAL_BLOCK');
+});
+test('CASE_E refuses modern offset substitution and unavailable historical confidence',async()=>{
+ const f=JSON.parse(readFileSync(new URL('./fixtures/case-e-before.json',import.meta.url),'utf8'));
+ for(const patch of [{UTC_OFFSET_EFFECTIVE:'+00:00',UTC_DATETIME:'1911-03-10T12:00:00Z'},{PRE_1970_CONFIDENCE:'UNAVAILABLE'}]){
+  const response=await callK02({...f.input,...patch});assert.equal(response.status,422);
+  const b=await response.json();assert.equal(b.calculation_performed,false);assert.equal(b.positions,undefined);
+ }
 });
 test('CASE_B rejects a winter offset even when local and UTC arithmetic agrees',async()=>{
  const f=JSON.parse(readFileSync(new URL('./fixtures/case-b.json',import.meta.url),'utf8'));
