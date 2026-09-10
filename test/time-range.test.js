@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {adaptRange,calculateRangeWith} from '../src/time-range.js';
 import {k02} from './fixtures/k02.js';
 import {refineSignBoundaries} from '../src/sign-boundaries.js';
-const input={k02:{...k02,TIME_PRECISION:'UNKNOWN',UTC_DATETIME:null},start_utc:'2000-01-01T00:00:00Z',end_utc:'2000-01-01T01:00:00Z'};
+const input={k02:{...k02,TIME_PRECISION:'HOUR',NORMALIZED_BIRTH_TIME:'00',LOCAL_CIVIL_DATETIME:null,UTC_DATETIME:null},start_utc:'2000-01-01T00:00:00Z',end_utc:'2000-01-01T00:59:59Z'};
 const good={ephemeris:'swiss',returnFlags:258,longitude:1,latitude:0,distance:1,longitudeSpeed:1,latitudeSpeed:0,distanceSpeed:0};
 const engine=calc=>({version:'2.10.03',julianDay:(y,m,d,h)=>2451544.5+h/24,calc,deltaT:()=>0.001});
 test('range schema, date bounds and unresolved civil time fail closed',()=>{
@@ -54,7 +54,7 @@ test('local failure retains other planets and unknown engine failure stops the r
  assert.throws(()=>calculateRangeWith(engine(()=>({...good,returnFlags:undefined})),adaptRange(input)),{code:'GLOBAL_RUNTIME_FAIL'});
 });
 test('pathological repeated crossings respect the request evaluation limit',()=>{
- const gate=adaptRange({...input,end_utc:'2000-01-02T02:00:00Z'});
+ const gate=adaptRange({...input,k02:{...input.k02,TIME_PRECISION:'UNKNOWN',NORMALIZED_BIRTH_TIME:null},end_utc:'2000-01-01T23:59:59Z'});
  const r=calculateRangeWith(engine(jd=>({...good,longitude:30+Math.cos((jd-2451544.5)*86400*Math.PI/300)})),gate);
  assert.equal(r.evaluated_sample_count,2048);assert.equal(r.search_budget_exhausted,true);
  assert.ok(r.positions.some(p=>p.boundary_search_status==='INCOMPLETE'));

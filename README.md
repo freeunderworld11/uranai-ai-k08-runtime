@@ -92,9 +92,21 @@ GET / と GET /health は200、既知パスのOPTIONSは204、非対応メソッ
 
 ### 明示UTC範囲の予備検査
 
-`POST /calculate/k02/range` は `{ "k02": <正本19項目>, "start_utc": <UTC文字列>, "end_utc": <UTC文字列> }` を受け取ります。これは `K08_EXPLICIT_UTC_RANGE_v1` という追加の入出力形式であり、K02正本19項目の変更ではありません。TIME_PRECISIONはHOUR/APPROXIMATE/UNKNOWNのみ。両端は通常APIと同じ厳密なUTC形式・1900〜2099年、開始より終了が後、最大26時間です。範囲は両端を含み、切り詰めません。
+v2では範囲の整合性検査を追加しました。旧v1の任意のUTC範囲は受理されない場合があります。UTCの両端は秒単位で、終了を含みます。
 
-呼出元が確認済みの範囲を明示してください。Runtimeは正午・午前0時・概算幅を補いません。現地日付・精度・UTC範囲の対応はまだ検証しないため、正式な時間範囲監査の代替にはなりません。曖昧な現地時刻、未確認タイムゾーン、受理不可の監査状態は停止します。元の入力はinput_echoに保存します。
+| TIME_PRECISION | 入力条件 |
+| --- | --- |
+| UNKNOWN | NORMALIZED_BIRTH_TIME / LOCAL_CIVIL_DATETIME / UTC_DATETIMEはnull。出生地の当日00:00:00〜23:59:59に両端が一致すること。 |
+| HOUR | この追加APIのNORMALIZED_BIRTH_TIMEは時だけの2桁文字列（例 `14`）。LOCAL_CIVIL_DATETIME / UTC_DATETIMEはnull。その時の00分00秒〜59分59秒と一致し、UTC幅が3599秒であること。 |
+| APPROXIMATE | 上記3つの単一時刻欄はnull。外側に `local_range: {start_local: "2000-01-01T13:30:00", end_local: "2000-01-01T14:30:00"}` を明示。UTC両端を出生地時刻に戻した値と一致すること。 |
+
+HOURの2桁表現とlocal_rangeは追加APIの取り決めであり、K02正本自体の機械形式を確定するものではありません。APPROXIMATEで日付をまたぐ範囲は現在は拒否します。UNKNOWNは夏時間の23時間・25時間の日に対応しますが、現地の午前0時が存在しない歴史的な日などは別途扱いが必要です。曖昧時刻の判定はK02のLOCAL_TIME_STATUSに依存し、この検査だけで再認証しません。
+
+矛盾は422で拒否し、天体計算に進めません。受理時も `range_consistency_status: CONDITIONAL` と、版照合未完了の制限を返します。元の入力値を訂正・補完しません。
+
+`POST /calculate/k02/range` は `{ "k02": <正本19項目>, "start_utc": <UTC文字列>, "end_utc": <UTC文字列> }` を受け取ります。これは `K08_EXPLICIT_UTC_RANGE_v2` という追加の入出力形式であり、K02正本19項目の変更ではありません。TIME_PRECISIONはHOUR/APPROXIMATE/UNKNOWNのみ。両端は通常APIと同じ厳密なUTC形式・1900〜2099年、開始より終了が後、最大26時間です。範囲は両端を含み、切り詰めません。
+
+呼出元が確認済みの範囲を明示してください。Runtimeは正午・午前0時・概算幅を補いません。現地日付・精度・UTC両端の対応を実行環境のIntlで検査します。K02のTZDB_VERSIONとの版一致は未確認のため、正式な時間範囲監査の代替にはなりません。曖昧な現地時刻、未確認タイムゾーン、受理不可の監査状態は停止します。元の入力はinput_echoに保存します。
 
 最大5分間隔（最大313点）で10天体を検査します。observed_sign_indicesは牡羊座=0〜魚座=11。複数サインを観測した天体だけSIGN_TIME_DEPENDENT=true、SIGN_STABLE_WITHOUT_TIME=falseです。サンプルが一致しても間の変化を否定できないため、両フラグはnull、status=CONDITIONALとします。1点でも失敗した天体はUNAVAILABLEですが、複数サインを既に観測した場合はTIME_DEPENDENTを保持します。failed_sample_countで欠落を確認できます。他の正常天体は残します。
 
@@ -104,7 +116,7 @@ GET / と GET /health は200、既知パスのOPTIONSは204、非対応メソッ
 
 1秒は数値探索の区間幅で、入力時刻・時系変換・天文モデルの絶対精度ではありません。UTC文字列はミリ秒に丸めます。格子間に隠れた複数の折り返しや境界への接触を完全検出したとは断定せず、`all_transitions_certified` は常にfalseです。`OBSERVED_TRANSITIONS_REFINED` も全境界の網羅を意味しません。SIGN_STABLE_WITHOUT_TIME=trueは返しません。
 
-代表時刻の出生図を返しません。ASC・MC・ハウス、アスペクトの範囲判定は未実装です。範囲応答はCOMPLETEにならず、本番承認もPENDINGです。24時間のローカルWorkers実行、標準実行版との太陽境界照合、逆行・0度通過・折り返し・失敗・探索上限を含む26テストを通過しました。
+代表時刻の出生図を返しません。ASC・MC・ハウス、アスペクトの範囲判定は未実装です。範囲応答はCOMPLETEにならず、本番承認もPENDINGです。24時間のローカルWorkers実行、標準実行版との太陽境界照合、逆行・0度通過・折り返し・失敗・探索上限を含む31テストを通過しました。
 
 1リクエストごとにWASMインスタンスを生成し、暦ファイルを配置して計算し、finallyでdisposeします。天体設定や入力を別リクエストと共有しません。
 3ファイルはビルドに同梱され、計算時の外部通信はありません。対応範囲はデータ全体より狭く制限しています。
