@@ -90,6 +90,14 @@ GET / と GET /health は200、既知パスのOPTIONSは204、非対応メソッ
 
 ## 状態分離とデータ
 
+### 単一時点のサイン・運行方向
+
+`/calculate` と `/calculate/k02` の正常な天体に、sign（英名）、sign_name（日本語）、sign_index（牡羊座=0）、sign_degree、sign_boundary_distance、sign_boundary_sensitive、motionを追加します。黄経は0以上360未満に正規化し、変更時だけraw_longitudeに元値を残します。既に範囲内の黄経はそのまま保持します。サインと境界判定は表示丸め前に行い、境界距離0.1度以下を感度ありとします。
+
+速度が負ならRETROGRADE、正ならDIRECT、厳密にゼロならZERO_SPEEDです。station_sensitiveはnull、station_statusはNUMERICAL_PRECISION_NOT_ESTABLISHEDとし、任意の微小速度閾値で留を断定しません。太陽・月のmotionも計算値として保持しますが、一般的な惑星逆行の解釈を適用するものではありません。
+
+UNAVAILABLE天体には派生値を追加しません。時刻範囲APIには代表時刻のサインを入れません。今回追加後、全43テストとビルドが成功しました。本番承認はPENDINGです。
+
 ### 単一時点のアスペクト
 
 `/calculate` と `/calculate/k02` は `aspects` を追加で返します。K08第93〜102節に従い、10天体の重複・自己組を除く45組を固定順に評価します。範囲APIには単一時点の結果を流用しません。
