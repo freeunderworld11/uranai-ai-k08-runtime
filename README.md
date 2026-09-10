@@ -237,3 +237,8 @@ POST /calculate/solar-boundary はK08_SOLAR_LONGITUDE_BOUNDARY_SERVICE_v1の開�
 既存の応答を保持したままK08_NATAL_RESULT、K08_HOUSE_RESULT、K08_AUDIT、AVAILABLE_COMPONENTS、K08_PROVENANCEを追加しました。正常な天体結果を残し、失敗項目はnull、条件付きASC・MCは状態付きで保持します。時刻範囲から代表出生時刻や黄経を作りません。
 
 本番承認は未完了のためOVERALL_STATUS=RUNTIME_NOT_APPROVED、K09_USAGE_STATUS=LOCAL_BLOCKです。数値計算の成功は鑑定への使用許可ではありません。監査の未評価項目はnull、未承認ゲートはfalse、総合監査はFAILとします。詳細は[出力契約](docs/RESULT_CONTRACT.md)を参照してください。正式なK19受入試験は別工程です。
+
+## K19監査との照合
+
+[固定ケース・Deployment Gate対応表](docs/K19_COVERAGE.md)に既存の証拠と未完了項目を整理しました。10天体と45組の重複・欠落、所属番号の異常を監査で検出します。構造検査の成功はK19全受入試験の合格を意味しません。
+

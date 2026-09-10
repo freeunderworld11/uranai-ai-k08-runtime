@@ -4,6 +4,10 @@ const auditKeys=`KNOWLEDGE_VERSION_VALID LICENSE_GATE_VALID DEPLOYMENT_GATE_VALI
 export function withK08Result(result) {
   const source=result.input_echo?.k02??result.input_echo??{};
   const range=Boolean(result.range_contract),positions=result.positions??[],h=result.houses??{};
+  const tenBodies=positions.length===10&&BODIES.every(b=>positions.filter(p=>p.body===b).length===1);
+  const pairs=result.aspects?.pairs;
+  const pairKeys=pairs?.map(p=>[BODIES.indexOf(p.body_a),BODIES.indexOf(p.body_b)].sort((a,b)=>a-b));
+  const validPairs=pairKeys?pairKeys.length===45&&pairKeys.every(([a,b])=>a>=0&&b>a)&&new Set(pairKeys.map(p=>p.join(':'))).size===45:null;
   const planets=Object.fromEntries(BODIES.map(body=>{
     const p=positions.find(p=>p.body===body)??{};
     const usable=p.status==='VALID'&&!range;
@@ -26,12 +30,12 @@ export function withK08Result(result) {
     RUNTIME_VERSION_VALID:result.runtime_version?result.runtime_version==='2.10.03':null,
     TZDB_VERSION_RECORDED:typeof source.TZDB_VERSION==='string'&&Boolean(source.TZDB_VERSION),
     JD_UT_VALID:Number.isFinite(result.jd_ut)?true:null,
-    TEN_PLANETS_VALID:range?null:positions.length===10&&positions.every(p=>p.status==='VALID'),
+    TEN_PLANETS_VALID:range?null:tenBodies&&positions.every(p=>p.status==='VALID'),
     HOUSE_RETURN_CODE_VALID:h.return_flag==null?null:h.return_flag===0,
     ASC_VALID:h.status==='VALID'?true:null,MC_VALID:h.status==='VALID'?true:null,
     HOUSE_CUSPS_VALID:h.status==='VALID'?true:h.status?false:null,
-    PLANET_HOUSES_VALID:range?null:positions.length===10&&positions.every(p=>p.house_status==='VALID'),
-    ASPECT_45_PAIRS_VALID:aspects.length===45?true:null,OVERALL:'FAIL'});
+    PLANET_HOUSES_VALID:range?null:tenBodies&&positions.every(p=>p.house_status==='VALID'&&Number.isInteger(p.house)&&p.house>=1&&p.house<=12),
+    ASPECT_45_PAIRS_VALID:validPairs,OVERALL:'FAIL'});
   const available={PLANETS:positions.filter(p=>p.status==='VALID').map(p=>p.body),
     ASC:h.status==='VALID'?'CALCULATED':h.asc_status??'UNAVAILABLE',MC:h.status==='VALID'?'CALCULATED':h.mc_status??'UNAVAILABLE',
     HOUSE_CUSPS:h.status==='VALID',PLANET_HOUSES:positions.filter(p=>p.house_status==='VALID').map(p=>p.body),
