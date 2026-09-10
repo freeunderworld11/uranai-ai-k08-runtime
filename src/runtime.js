@@ -4,6 +4,24 @@ import planets from '../.generated/ephe/sepl_18.se1';
 import moon from '../.generated/ephe/semo_18.se1';
 import asteroids from '../.generated/ephe/seas_18.se1';
 import { calculateWith, CalculationError } from './calculation.js';
+import {adaptK02} from './k02-adapter.js';
+export async function calculateK02(source) {
+  const gate=adaptK02(source);
+  if(!gate.utc_parts)return {result_status:'UNAVAILABLE',input_contract:'K02_TO_K08_ASTRO_TIME_GEO_v1',...gate};
+  let swe;
+  try {
+    swe=await createSwissEph();
+    swe.mountEphemeris({'sepl_18.se1':planets,'semo_18.se1':moon,'seas_18.se1':asteroids});
+    const p=gate.utc_parts;
+    const jd=swe.julianDay(p.year,p.month,p.day,p.hour);
+    const result=calculateWith(swe,{jd_ut:jd,latitude:source.LATITUDE,longitude:source.LONGITUDE},{skipHouses:gate.geo_status==='LOCAL_BLOCK'});
+    const {utc_parts,...audit}=gate;
+    return {...result,input_contract:'K02_TO_K08_ASTRO_TIME_GEO_v1',...audit,derived_runtime_value:{JULIAN_DAY_UT:jd},result_status:gate.time_status==='CONDITIONAL'&&result.result_status==='COMPLETE'?'PARTIAL':result.result_status};
+  } catch(error) {
+    if(error instanceof CalculationError)throw error;
+    throw new CalculationError('RUNTIME_UNAVAILABLE',503);
+  } finally {swe?.dispose();}
+}
 export async function calculate(input) {
   let swe;
   try {

@@ -3,11 +3,21 @@ import {before,after,test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {unstable_dev} from 'wrangler';
+import {k02} from './fixtures/k02.js';
 let worker;
 before(async()=>{worker=await unstable_dev('src/worker.js',{config:'wrangler.jsonc',local:true,port:0,experimental:{disableExperimentalWarning:true}});});
 after(async()=>{await worker?.stop();});
 const input={jd_ut:2451545,latitude:35.6762,longitude:139.6503};
 const call=(body=input)=>worker.fetch('/calculate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+const callK02=body=>worker.fetch('/calculate/k02',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+test('K02 UTC conversion matches JD and supports planets without geography',async()=>{
+ const r=await callK02(k02);assert.equal(r.status,200);const b=await r.json();
+ assert.equal(b.jd_ut,2451545);assert.deepEqual(b.input_echo,k02);assert.equal(b.valid_planet_count,10);
+ const noGeo={...k02,LATITUDE:null,LONGITUDE:null,GEO_PRECISION:'UNAVAILABLE',GEO_STATUS:'UNAVAILABLE'};
+ const partial=await (await callK02(noGeo)).json();assert.equal(partial.houses.status,'UNAVAILABLE_GEO');assert.deepEqual(partial.positions,b.positions);
+ assert.equal(partial.result_status,'PARTIAL');
+ const blocked=await callK02({...k02,LOCAL_TIME_STATUS:'AMBIGUOUS'});assert.equal(blocked.status,422);const hold=await blocked.json();assert.equal(hold.positions,undefined);assert.equal(hold.calculation_performed,false);
+});
 test('health does not claim K08 deployment approval',async()=>{
  const r=await worker.fetch('/health'); assert.equal(r.status,200);
  const b=await r.json();assert.equal(b.engine_integrated,true);assert.equal(b.calculation_ready,false);assert.equal(b.k08_deployment_gate,'PENDING');

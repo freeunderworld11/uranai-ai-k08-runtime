@@ -29,6 +29,24 @@ npm run dev
 
 ## 計算API
 
+### K02正式フィールドの受付（今回追加）
+
+`POST /calculate/k02` はK02_TO_K08_ASTRO_TIME_GEO_v1の19項目をJSONオブジェクトとして直接受け取ります。フィールド名は [src/k02-adapter.js](src/k02-adapter.js) のK02_FIELDS、入力例は [test/fixtures/k02.js](test/fixtures/k02.js) を参照してください。入力例のTZDB_VERSIONは試験用の値で、承認済みTZDBを意味しません。
+
+機械用の暫定表現として、緯度・経度は数値またはnull、残りは文字列またはnull。すべてのキーを含め、不明値はnullとします。UTCは `YYYY-MM-DDTHH:mm:ss[.SSS]Z`、うるう秒表記・不正日付・24時は拒否。offsetは元の文字列を保存するだけで計算に使用せず、K02のUTCを別の時差で置換しません。
+
+K02_v2.4_PRODUCTIONとPASS/PARTIAL_PASSを確認し、LOCAL_TIME_STATUS=NORMAL、TIMEZONE_STATUS=CONFIRMEDおよびtimezone ID・TZDB版の記録が必要です。利用可能なUTCをSwiss EphemerisのjulianDayで変換し、input_echoに元の19項目、derived_runtime_valueに生成したJDを返します。
+
+SECONDは時点計算、MINUTEは入力UTC時点の条件付き試算です。分の中での境界安定性を保証しません。HOUR・APPROXIMATE・UNKNOWNは範囲探索が未実装のためLOCAL_BLOCKにします。DSTの曖昧時刻・存在しない時刻を勝手に補正しません。
+
+GEO_STATUS=CONFIRMEDかつGEO_PRECISION=EXACT/CITY_CENTERで座標が有効な場合だけハウスを計算します。それ以外はUNAVAILABLE_GEOとし、UTCが利用できれば天体は残します。LOCALITY_CENTER等を正確な座標へ格上げしません。
+
+1970年以前の信頼性がMEDIUM/LIMITEDなら条件付き、HIGH/MEDIUM/LIMITED以外なら時刻依存計算を留保。元の時刻精度と履歴信頼性は変更しません。time_status=CONDITIONALの場合、各数値のVALIDは「エンジン計算として利用可能」という意味で、出生時刻全体の確定を意味しません。
+
+この入口はK02宣言の受領と状態判定を行います。IANA TZDBの実照合、local日時とoffsetとUTCの整合検証、K02提供元の認証、時間範囲探索は未実装です。K02の正式入力フィールド対応と、K02実行基盤全体の検証済みを混同しないでください。本番GateはPENDINGです。
+
+### 開発用JD入力
+
 ```http
 POST /calculate
 Content-Type: application/json

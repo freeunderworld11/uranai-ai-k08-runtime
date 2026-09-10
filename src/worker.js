@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { calculate } from './runtime.js';
+import { calculate, calculateK02 } from './runtime.js';
 import { validateInput, CalculationError } from './calculation.js';
 const service = "uranai-ai-k08-runtime";
 const k08Version = "K08_v2.2_PRODUCTION";
@@ -22,16 +22,17 @@ function reply(body, status = 200, extraHeaders = {}) {
 export default {
   async fetch(request) {
     const { pathname } = new URL(request.url);
-    if (!["/", "/health", "/calculate"].includes(pathname)) {
+    if (!["/", "/health", "/calculate", "/calculate/k02"].includes(pathname)) {
       return reply({ error: "NOT_FOUND" }, 404);
     }
-    const allow = pathname === "/calculate" ? "POST, OPTIONS" : "GET, OPTIONS";
+    const calculationRoute = pathname === '/calculate' || pathname === '/calculate/k02';
+    const allow = calculationRoute ? "POST, OPTIONS" : "GET, OPTIONS";
     if (request.method === "OPTIONS") return reply(null, 204, { Allow: allow });
-    if ((pathname === "/calculate" && request.method !== "POST") ||
-        (pathname !== "/calculate" && request.method !== "GET")) {
+    if ((calculationRoute && request.method !== "POST") ||
+        (!calculationRoute && request.method !== "GET")) {
       return reply({ error: "METHOD_NOT_ALLOWED" }, 405, { Allow: allow });
     }
-    if (pathname === "/calculate") {
+    if (calculationRoute) {
       try {
         if (request.headers.get('Content-Type')?.split(';')[0].trim().toLowerCase() !== 'application/json') throw new CalculationError('UNSUPPORTED_MEDIA_TYPE',415);
         const reader = request.body?.getReader();
@@ -53,8 +54,7 @@ export default {
         let input;
         try { input = JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(buffer)); }
         catch { throw new CalculationError('INVALID_JSON',400); }
-        const validated = validateInput(input);
-        const result = await calculate(validated);
+        const result = pathname === '/calculate/k02' ? await calculateK02(input) : await calculate(validateInput(input));
         return reply({service,k08_version:k08Version,api_contract:'K08_ENGINE_ADAPTER_v0.2',runtime_status:result.result_status==='COMPLETE'?'CALCULATED':result.result_status==='PARTIAL'?'PARTIAL_RESULT':'LOCAL_HOLD',calculation_performed:result.result_status!=='UNAVAILABLE',k08_deployment_gate:'PENDING',...result},result.result_status==='UNAVAILABLE'?422:200);
       } catch (error) {
         const known = error instanceof CalculationError;

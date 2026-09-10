@@ -17,8 +17,11 @@ export function validateInput(input) {
 function finite(values) { if (!values.every(Number.isFinite)) throw new CalculationError('INVALID_ENGINE_OUTPUT',503); }
 function globalFailure() { throw new CalculationError('GLOBAL_RUNTIME_FAIL',503); }
 function engineError(error, fn) { return error?.name === 'SwissEphError' && error.fn === fn; }
-export function calculateWith(swe, input) {
-  input = validateInput(input);
+export function calculateWith(swe, input, {skipHouses=false} = {}) {
+  if(skipHouses) {
+    // Validate the date independently; coordinates are not consumed on this path.
+    validateInput({jd_ut:input.jd_ut,latitude:0,longitude:0});
+  } else input = validateInput(input);
   if (swe.version !== '2.10.03') throw new CalculationError('RUNTIME_VERSION_MISMATCH',503);
   const {jd_ut,latitude,longitude} = input;
   const positions = BODIES.map((body,id)=>{
@@ -36,11 +39,11 @@ export function calculateWith(swe, input) {
     return {body,status:'VALID',error:null,longitude:p.longitude,latitude:p.latitude,distance_au:p.distance,longitude_speed:p.longitudeSpeed,latitude_speed:p.latitudeSpeed,distance_speed_au:p.distanceSpeed,return_flag:p.returnFlags};
   });
   let h;
-  try { h = swe.houses(jd_ut,latitude,longitude,'P'); }
+  try { if(!skipHouses) h = swe.houses(jd_ut,latitude,longitude,'P'); }
   catch(error) { if (!engineError(error,'swe_houses_ex2')) globalFailure(); }
   if (h && (!Number.isInteger(h.returnFlags) || h.requestedSystem !== 'P')) globalFailure();
   const validHouses = h && h.returnFlags === 0 && !h.substituted && !h.warning && Array.isArray(h.cusps) && h.cusps.length === 12 && [...h.cusps,h.ascendant,h.midheaven].every(Number.isFinite);
-  const houses = validHouses
+  const houses = skipHouses ? {system:null,system_requested:'PLACIDUS',status:'UNAVAILABLE_GEO',asc_status:'UNAVAILABLE',mc_status:'UNAVAILABLE'} : validHouses
     ? {system:'PLACIDUS',status:'VALID',asc:h.ascendant,mc:h.midheaven,cusps:h.cusps,return_flag:h.returnFlags}
     : {system:null,system_requested:'PLACIDUS',status:'UNAVAILABLE_PLACIDUS',return_flag:h?.returnFlags??null,fallback_detected:h?.substituted??false,asc_status:'UNAVAILABLE',mc_status:'UNAVAILABLE',limitation:'Independent ASC/MC validation after house failure is not implemented.'};
   const deltaT = swe.deltaT(jd_ut,'swiss') * 86400;
