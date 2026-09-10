@@ -43,4 +43,8 @@ Each row stores longitude (degrees), latitude (degrees), distance (AU), longitud
 House reference values use the same command with `-p0 -fPl -house139.6503,35.6762,P`: 12 cusps, Ascendant and MC, all in degrees. Each is compared with tolerance 1e-6.
 # Additional wrapper modification: planet house positions
 
+## Fixed timezone data
+
+Added moment-timezone 0.6.3 and moment 2.30.1 (MIT). License copies are in licenses/moment-timezone-MIT.txt and licenses/moment-MIT.txt. The full packed timezone data declares IANA TZDB 2026c. Its SHA-256 is 43f7878a298740ff6acabb9c726c7e5431a94bdca79abad274a6fe6e355bfe81. Upstream sources: https://github.com/moment/moment-timezone and https://www.iana.org/time-zones . This is the project's packed distribution artifact, not a claim of independently rebuilding the IANA source. The IANA source archive tzdata2026c.tar.gz was inspected during validation; the packed file is the artifact used by the runtime.
+
 The preparation script adds a housePosition wrapper over the existing WASM swe_house_pos export. It reuses instance-owned numeric/error buffers and returns the warning separately. No dependency binary is changed. This additional modification is distributed under the existing project/dependency license terms.

@@ -1,15 +1,10 @@
+import {localAtUTC} from './fixed-timezone.js';
 // SPDX-License-Identifier: AGPL-3.0-only
 import {CalculationError} from './calculation.js';
 const fail=code=>{throw new CalculationError(code,422);};
 export function checkRangeConsistency(input) {
   const s=input.k02;
-  let formatter;
-  try {formatter=new Intl.DateTimeFormat('en-GB',{timeZone:s.TIMEZONE_ID,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'});}
-  catch {fail('RANGE_TIMEZONE_UNSUPPORTED');}
-  const local=utc=>{
-    const p=Object.fromEntries(formatter.formatToParts(new Date(utc)).map(p=>[p.type,p.value]));
-    return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}:${p.second}`;
-  };
+  const local=utc=>{const value=localAtUTC(s.TIMEZONE_ID,utc);if(value===null)fail('RANGE_TIMEZONE_UNSUPPORTED');return value;};
   if(Date.parse(input.start_utc)%1000 || Date.parse(input.end_utc)%1000)fail('RANGE_REQUIRES_WHOLE_SECONDS');
   const start=local(input.start_utc),end=local(input.end_utc),date=s.NORMALIZED_BIRTH_DATE;
   if(!/^\d{4}-\d{2}-\d{2}$/.test(date??''))fail('RANGE_BIRTH_DATE_INVALID');
@@ -42,7 +37,7 @@ export function checkRangeConsistency(input) {
       if(center<start||center>end)fail('APPROXIMATE_CENTER_OUTSIDE_RANGE');
     }
   }
-  return {range_consistency_status:'CONDITIONAL',range_consistency_method:'RUNTIME_INTL_ENDPOINT_CHECK',
+  return {range_consistency_status:'CONDITIONAL',range_consistency_method:'PINNED_TZDB_ENDPOINT_CHECK',
     verified_local_range:{start_local:start,end_local:end},
-    range_consistency_limitations:['RUNTIME_TZDB_VERSION_NOT_MATCHED_TO_K02','DST_AMBIGUITY_AUTHORITY_REMAINS_K02']};
+    range_consistency_limitations:['K02_SOURCE_PROVENANCE_NOT_CERTIFIED','DST_AMBIGUITY_AUTHORITY_REMAINS_K02']};
 }

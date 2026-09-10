@@ -5,6 +5,10 @@ const root = new URL('../', import.meta.url);
 const core = new URL('node_modules/@kuntay/swisseph/', root);
 const data = new URL('node_modules/@kuntay/swisseph-data/', root);
 const out = new URL('.generated/', root);
+const tzdir=new URL('node_modules/moment-timezone/',root);
+if(JSON.parse(readFileSync(new URL('package.json',tzdir))).version!=='0.6.3'||JSON.parse(readFileSync(new URL('node_modules/moment/package.json',root))).version!=='2.30.1')throw Error('Unexpected timezone library version');
+const tzdata=checked(new URL('data/packed/latest.json',tzdir),'43f7878a298740ff6acabb9c726c7e5431a94bdca79abad274a6fe6e355bfe81');
+if(JSON.parse(tzdata).version!=='2026c')throw Error('Unexpected TZDB version');
 function checked(url, hash) {
   const bytes = readFileSync(url);
   if (createHash('sha256').update(bytes).digest('hex') !== hash) throw Error(`Integrity mismatch: ${url}`);

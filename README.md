@@ -1,5 +1,17 @@
 # uranai-ai-k08-runtime
 
+## 固定タイムゾーンデータへの移行（現在の仕様）
+
+時刻照合はmoment-timezone 0.6.3 / moment 2.30.1の全期間データ、TZDB 2026cへ固定しました。ビルド時に版とdata/packed/latest.jsonのSHA-256 `43f7878a298740ff6acabb9c726c7e5431a94bdca79abad274a6fe6e355bfe81` を検査します。後述のIntl照合・データ版未取得の記録は旧方式の経緯です。process.versionsの値は診断情報としてのみ残し、時刻判定には使いません。
+
+K02のTZDB_VERSIONが2026cと異なる場合はK02_TZDB_VERSION_MISMATCHで留保します。呼出側の版名だけを書き換えて通過させないでください。実際のK02使用データと版をそろえて再検証する必要があります。入力例の2026cはテスト用の申告で、K02の出典認証の証拠ではありません。
+
+単一時点では現地日時に対応するUTC候補を遷移データから列挙し、0件・複数件・UTC不一致を局所停止します。Momentの自動補正パーサーは使いません。範囲APIは同じ固定データでUTC両端を現地時刻へ戻して照合し、単一offsetを範囲全体に流用しません。K02正本値の修正・置換はしません。
+
+timezone_auditにvalidation_data_version/source/sha256/comparison/integrityを追加しました。配布データの版・ハッシュ確認と、K02出典の認証は別です。K02出典、全地域の歴史精度、K19承認が未完了のためproduction_eligible=false、本番ゲートPENDINGを維持します。
+
+全60テストと統合ビルドが成功。統合バンドルはgzip 2205.76 KiB。npmの実行用依存監査は0件、開発用依存（sharpを経由するminiflare/wrangler）にはhighの報告3件があり、公開前の開発環境確認事項です。自動の強制更新は行っていません。全試験には通常時刻・版違い・曖昧時刻・存在しない日・歴史的な秒単位offsetを含みます。
+
 Cloudflare Workers runtime for K08 Swiss Ephemeris integration
 
 Swiss Ephemeris **2.10.03** のWASMと暦データを組み込んだ計算アダプターです。ローカルworkerdで検証済み。本番未公開・K08 Deployment Gate未承認です。

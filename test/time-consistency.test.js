@@ -1,11 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {checkTimeConsistency} from '../src/time-consistency.js';
 import {adaptK02} from '../src/k02-adapter.js';
 import {k02} from './fixtures/k02.js';
 test('offset arithmetic supports date rollover and second offsets without replacing source',()=>{
  for(const [offset,utc,seconds] of [['+09:00','1999-12-31T15:00:00Z',32400],['-05:00','2000-01-01T05:00:00Z',-18000],['+00:00:30','1999-12-31T23:59:30Z',30]]) {
   const source={...k02,NORMALIZED_BIRTH_TIME:'00:00:00',LOCAL_CIVIL_DATETIME:'2000-01-01T00:00:00',UTC_OFFSET_EFFECTIVE:offset,UTC_DATETIME:utc};
-  const before=structuredClone(source),r=adaptK02(source);assert.deepEqual(r.input_echo,before);assert.deepEqual(source,before);assert.equal(r.derived_utc_offset_seconds,seconds);
+  const before=structuredClone(source),r=checkTimeConsistency(source);assert.deepEqual(source,before);assert.equal(r.derived_utc_offset_seconds,seconds);
  }
 });
 test('mismatching local date, offset, precision and invalid local calendar are rejected',()=>{
