@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { calculate, calculateK02, calculateK02Range } from './runtime.js';
+import { calculate, calculateK02, calculateK02Range, calculateSolarBoundary } from './runtime.js';
 import { validateInput, CalculationError } from './calculation.js';
 import {timezoneAudit} from './timezone-audit.js';
 const service = "uranai-ai-k08-runtime";
@@ -23,10 +23,10 @@ function reply(body, status = 200, extraHeaders = {}) {
 export default {
   async fetch(request) {
     const { pathname } = new URL(request.url);
-    if (!["/", "/health", "/calculate", "/calculate/k02", "/calculate/k02/range"].includes(pathname)) {
+    if (!["/", "/health", "/calculate", "/calculate/k02", "/calculate/k02/range", "/calculate/solar-boundary"].includes(pathname)) {
       return reply({ error: "NOT_FOUND" }, 404);
     }
-    const calculationRoute = pathname === '/calculate' || pathname === '/calculate/k02' || pathname === '/calculate/k02/range';
+    const calculationRoute = pathname === '/calculate' || pathname === '/calculate/k02' || pathname === '/calculate/k02/range' || pathname === '/calculate/solar-boundary';
     const allow = calculationRoute ? "POST, OPTIONS" : "GET, OPTIONS";
     if (request.method === "OPTIONS") return reply(null, 204, { Allow: allow });
     if ((calculationRoute && request.method !== "POST") ||
@@ -55,7 +55,7 @@ export default {
         let input;
         try { input = JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(buffer)); }
         catch { throw new CalculationError('INVALID_JSON',400); }
-        const result = pathname === '/calculate/k02/range' ? await calculateK02Range(input) : pathname === '/calculate/k02' ? await calculateK02(input) : await calculate(validateInput(input));
+        const result = pathname === '/calculate/solar-boundary' ? await calculateSolarBoundary(input) : pathname === '/calculate/k02/range' ? await calculateK02Range(input) : pathname === '/calculate/k02' ? await calculateK02(input) : await calculate(validateInput(input));
         return reply({service,k08_version:k08Version,api_contract:'K08_ENGINE_ADAPTER_v0.2',runtime_status:result.result_status==='COMPLETE'?'CALCULATED':result.result_status==='PARTIAL'?'PARTIAL_RESULT':'LOCAL_HOLD',calculation_performed:result.result_status!=='UNAVAILABLE',k08_deployment_gate:'PENDING',...result},result.result_status==='UNAVAILABLE'?422:200);
       } catch (error) {
         const known = error instanceof CalculationError;

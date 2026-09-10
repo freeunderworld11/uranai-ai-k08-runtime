@@ -1,3 +1,4 @@
+import {solarBoundaryWith,validateSolarInput} from './solar-boundary.js';
 // SPDX-License-Identifier: AGPL-3.0-only
 import { createSwissEph } from '../.generated/dist/instance.js';
 import planets from '../.generated/ephe/sepl_18.se1';
@@ -50,4 +51,12 @@ export async function calculate(input) {
     if (error instanceof CalculationError) throw error;
     throw new CalculationError('RUNTIME_UNAVAILABLE',503);
   } finally { swe?.dispose(); }
+}
+
+export async function calculateSolarBoundary(input) {
+ validateSolarInput(input);
+ let swe;
+ try {swe=await createSwissEph();swe.mountEphemeris({'sepl_18.se1':planets,'semo_18.se1':moon,'seas_18.se1':asteroids});return solarBoundaryWith(swe,input);}
+ catch(e){if(e instanceof CalculationError)throw e;throw new CalculationError('RUNTIME_UNAVAILABLE',503);}
+ finally{swe?.dispose();}
 }

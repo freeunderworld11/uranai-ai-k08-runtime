@@ -221,3 +221,13 @@ K02時点結果・範囲結果とhealthにtimezone_auditを追加しました。
 比較はK02_VERSION_MISSING / RUNTIME_VERSION_UNAVAILABLE / REPORTED_VERSIONS_MATCH / REPORTED_VERSIONS_MISMATCHです。一致もデータ出典の認証ではありません。現在は両側の出典確認false、data_source_artifactとdata_manifest_hashはnull、timezone_certification_status=UNVERIFIED、production_eligible=falseを維持します。IANAのURLは公式参考先であり、実際に使われたデータの出典証明として扱いません。
 
 この変更は証跡の記録であり、新しいタイムゾーンデータの導入や本番承認は行いません。既存の開発用計算は従来の入力ゲートで動作し、版申告の一致だけで制約を解除しません。確認用参考：[IANA Time Zones](https://www.iana.org/time-zones)、[Cloudflare process](https://developers.cloudflare.com/workers/runtime-apis/nodejs/process/)。全58テストとビルドが成功。次に、版と配布データを固定できる検証方法を選び、実際の出典・ハッシュ・回帰結果をそろえる必要があります。
+
+## K02向け太陽黄経境界サービス
+
+POST /calculate/solar-boundary はK08_SOLAR_LONGITUDE_BOUNDARY_SERVICE_v1の開発用入口です。必須項目はTARGET_SOLAR_LONGITUDE_DEG（0以上360未満の数値）、SEARCH_START_UTC、SEARCH_END_UTC、TIME_SCALE_REQUIREMENT（現在UTのみ）、K02_VERSION（K02_v2.4_PRODUCTION）。UTCは秒単位のYYYY-MM-DDTHH:mm:ssZ、1900〜2099年、開始より後の終了、最大32日、両端を含みます。座標・出生図・K09解釈は不要です。
+
+最大6時間間隔で太陽を検査し、観測した到達区間が1つの場合に二分探索で0.1秒以内の区間へ絞ります。各計算のSWIEPH・SPEEDフラグ、正の速度、警告・黄経範囲を確認します。戻り値はBOUNDARY_UTC_DATETIME（区間中点の数値推定）、SOLAR_LONGITUDE_AT_BOUNDARY、BOUNDARY_BRACKET_UTC、版・データ識別情報です。CALCULATION_STATUS=CALCULATEDでもCONFIDENCE_STATUS=CONDITIONAL、本番ゲートPENDINGです。0.1秒は探索幅で、絶対UTC精度や全ケースの一意性の認証ではありません。
+
+到達なし、複数候補、採用不可の計算値はUNRESOLVED（HTTP 422）で時刻を返しません。基盤破損は全体停止します。名称・立春区分・月支等の意味はK02の責任で、本APIは付けません。K02専用は論理的な呼出契約であり、現在の開発用APIに呼出元認証は未実装です。本番公開前に実際の接続と時系の受入確認が必要です。
+
+2000-03-20の0度到達を公式swetest64の07:35:14〜07:35:15 UTC参照と照合しました。端点到達・未到達・入力不正・フラグ破損を含む全64テストとビルドが成功しました。

@@ -11,6 +11,13 @@ const input={jd_ut:2451545,latitude:35.6762,longitude:139.6503};
 const call=(body=input)=>worker.fetch('/calculate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
 const callK02=body=>worker.fetch('/calculate/k02',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
 const planetCore=positions=>positions.map(p=>Object.fromEntries(Object.entries(p).filter(([k])=>!k.startsWith('house'))));
+test('K02 solar boundary service matches native equinox reference',async()=>{
+ const body={TARGET_SOLAR_LONGITUDE_DEG:0,SEARCH_START_UTC:'2000-03-20T00:00:00Z',SEARCH_END_UTC:'2000-03-21T00:00:00Z',TIME_SCALE_REQUIREMENT:'UT',K02_VERSION:'K02_v2.4_PRODUCTION'};
+ const r=await worker.fetch('/calculate/solar-boundary',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+ assert.equal(r.status,200);const b=await r.json();const t=Date.parse(b.BOUNDARY_UTC_DATETIME);
+ assert.ok(t>=Date.parse('2000-03-20T07:35:14Z')&&t<=Date.parse('2000-03-20T07:35:15Z'));assert.ok(b.BRACKET_WIDTH_SECONDS<=0.1);
+ assert.equal(b.CALCULATION_STATUS,'CALCULATED');assert.equal(b.CONFIDENCE_STATUS,'CONDITIONAL');assert.equal(b.positions,undefined);assert.equal(b.houses,undefined);
+});
 test('approximate overnight request retains center without calculating a substitute instant',async()=>{
  const body={k02:{...k02,TIME_PRECISION:'APPROXIMATE',NORMALIZED_BIRTH_TIME:'00:15',LOCAL_CIVIL_DATETIME:'2000-01-01T00:15:00',UTC_DATETIME:null},start_utc:'1999-12-31T23:30:00Z',end_utc:'2000-01-01T01:00:00Z',local_range:{start_local:'1999-12-31T23:30:00',end_local:'2000-01-01T01:00:00'}};
  const r=await worker.fetch('/calculate/k02/range',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
