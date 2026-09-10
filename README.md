@@ -201,3 +201,11 @@ APPROXIMATEではNORMALIZED_BIRTH_TIMEにHH:mmまたはHH:mm:ssの概算時刻�
 日付付きlocal_rangeとUTC両端の一致を確認し、概算中心があれば指定範囲内にあること、中心がなければ出生現地日と範囲が重なることを検査します。許容幅・中点を生成せず、範囲を切り詰めません。最大26時間・対応年・探索上限は従来どおりです。概算中心のタイムゾーン上の曖昧性を新たに認証する機能ではなく、K02の状態と既存のCONDITIONAL制限を引き継ぎます。
 
 v2の正当な入力は引き続き受理しますが、応答range_contractはv3に変わります。呼出側で固定版を検査している場合は更新が必要です。全56テストとビルドが成功。本番承認はPENDINGです。
+
+## タイムゾーン版・出典の監査
+
+K02時点結果・範囲結果とhealthにtimezone_auditを追加しました。K02申告版、実行環境がprocess.versions.tzで報告する版、ICU報告版を分けます。報告値が空ならnullとし、K02申告版・互換日・ビルド用Nodeの版から推測しません。2026-09-10のローカルworkerd検証ではtzとicuは空文字でした。
+
+比較はK02_VERSION_MISSING / RUNTIME_VERSION_UNAVAILABLE / REPORTED_VERSIONS_MATCH / REPORTED_VERSIONS_MISMATCHです。一致もデータ出典の認証ではありません。現在は両側の出典確認false、data_source_artifactとdata_manifest_hashはnull、timezone_certification_status=UNVERIFIED、production_eligible=falseを維持します。IANAのURLは公式参考先であり、実際に使われたデータの出典証明として扱いません。
+
+この変更は証跡の記録であり、新しいタイムゾーンデータの導入や本番承認は行いません。既存の開発用計算は従来の入力ゲートで動作し、版申告の一致だけで制約を解除しません。確認用参考：[IANA Time Zones](https://www.iana.org/time-zones)、[Cloudflare process](https://developers.cloudflare.com/workers/runtime-apis/nodejs/process/)。全58テストとビルドが成功。次に、版と配布データを固定できる検証方法を選び、実際の出典・ハッシュ・回帰結果をそろえる必要があります。

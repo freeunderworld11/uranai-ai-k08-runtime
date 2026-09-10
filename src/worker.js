@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { calculate, calculateK02, calculateK02Range } from './runtime.js';
 import { validateInput, CalculationError } from './calculation.js';
+import {timezoneAudit} from './timezone-audit.js';
 const service = "uranai-ai-k08-runtime";
 const k08Version = "K08_v2.2_PRODUCTION";
 const sourceUrl = "https://github.com/freeunderworld11/uranai-ai-k08-runtime";
@@ -76,6 +77,7 @@ export default {
       runtime_status: "ENGINE_INTEGRATED",
       ephemeris: "SWISS_EPHEMERIS",
       calculation_ready: false,
+      timezone_audit:timezoneAudit(null),
       engine_integrated: true,
       api_contract: 'K08_ENGINE_ADAPTER_v0.2',
       k08_deployment_gate: 'PENDING',

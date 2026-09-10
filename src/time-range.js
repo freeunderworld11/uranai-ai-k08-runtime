@@ -5,6 +5,7 @@ import {refineSignBoundaries,signIndex} from './sign-boundaries.js';
 import {checkRangeConsistency} from './range-consistency.js';
 import {calculateAspectRange} from './aspect-range.js';
 import {refineAspectBoundaries} from './aspect-boundaries.js';
+import {timezoneAudit} from './timezone-audit.js';
 
 // This envelope is an adapter extension, not part of the canonical K02 fields.
 export function adaptRange(input) {
@@ -57,6 +58,7 @@ export function calculateRangeWith(swe,gate) {
     // Sample agreement cannot certify stability between samples.
   }
   return {input_echo:gate.input_echo,input_contract:gate.input_contract,range_contract:gate.range_contract,
+    timezone_audit:timezoneAudit(gate.input_echo.k02),
     ...gate.consistency,
     result_status:summary.some(p=>p.status!=='UNAVAILABLE')?'PARTIAL':'UNAVAILABLE',
     time_status:'CONDITIONAL',positions:summary,sample_count:intervals+1,max_sample_spacing_seconds:300,

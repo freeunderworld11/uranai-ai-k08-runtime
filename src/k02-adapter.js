@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import {CalculationError} from './calculation.js';
 import {checkTimeConsistency} from './time-consistency.js';
+import {timezoneAudit} from './timezone-audit.js';
 export const K02_FIELDS = ['NORMALIZED_BIRTH_DATE','NORMALIZED_BIRTH_TIME','TIME_PRECISION','LOCAL_CIVIL_DATETIME','PLACE_NORMALIZED','LATITUDE','LONGITUDE','GEO_PRECISION','GEO_STATUS','TIMEZONE_ID','TIMEZONE_STATUS','TZDB_VERSION','PRE_1970_CONFIDENCE','DST_STATUS','LOCAL_TIME_STATUS','UTC_OFFSET_EFFECTIVE','UTC_DATETIME','K02_AUDIT_STATUS','K02_VERSION'];
 export function adaptK02(source,{rangeEndpoint=false}={}) {
   if (!source || typeof source !== 'object' || Array.isArray(source) || K02_FIELDS.some(k=>!Object.hasOwn(source,k)) || Object.keys(source).some(k=>!K02_FIELDS.includes(k))) throw new CalculationError('K02_SCHEMA_ERROR',400);
@@ -11,8 +12,9 @@ export function adaptK02(source,{rangeEndpoint=false}={}) {
     } else if(value!==null && typeof value!=='string') throw new CalculationError('K02_SCHEMA_ERROR',400);
   }
   const input_echo=structuredClone(source);
+  const timezone_audit=timezoneAudit(source);
   const limits=[];
-  const blocked=reason=>({input_echo,time_status:'LOCAL_BLOCK',geo_status:'LOCAL_BLOCK',limitations:[reason],utc_parts:null});
+  const blocked=reason=>({timezone_audit,input_echo,time_status:'LOCAL_BLOCK',geo_status:'LOCAL_BLOCK',limitations:[reason],utc_parts:null});
   if(source.K02_VERSION!=='K02_v2.4_PRODUCTION')return blocked('K02_VERSION_MISMATCH');
   if(!['PASS','PARTIAL_PASS'].includes(source.K02_AUDIT_STATUS))return blocked('K02_AUDIT_NOT_ACCEPTED');
   if(!['SECOND','MINUTE','HOUR','APPROXIMATE','UNKNOWN'].includes(source.TIME_PRECISION))throw new CalculationError('K02_TIME_PRECISION_INVALID',400);
@@ -32,5 +34,5 @@ export function adaptK02(source,{rangeEndpoint=false}={}) {
   if(source.K02_AUDIT_STATUS==='PARTIAL_PASS')limits.push('K02_PARTIAL_PASS');
   const geoValid=source.GEO_STATUS==='CONFIRMED' && ['EXACT','CITY_CENTER'].includes(source.GEO_PRECISION) && Number.isFinite(source.LATITUDE)&&Math.abs(source.LATITUDE)<=90&&Number.isFinite(source.LONGITUDE)&&Math.abs(source.LONGITUDE)<=180;
   if(!geoValid)limits.push('GEO_DEPENDENT_RESULTS_BLOCKED');
-  return {...(rangeEndpoint?{}:checkTimeConsistency(source)),input_echo,time_status:limits.some(x=>x!=='GEO_DEPENDENT_RESULTS_BLOCKED')?'CONDITIONAL':'VALID',geo_status:geoValid?'VALID':'LOCAL_BLOCK',limitations:limits,utc_parts:{year,month,day,hour:hour+minute/60+(second+Number('0.'+(m[7]??'0')))/3600}};
+  return {timezone_audit,...(rangeEndpoint?{}:checkTimeConsistency(source)),input_echo,time_status:limits.some(x=>x!=='GEO_DEPENDENT_RESULTS_BLOCKED')?'CONDITIONAL':'VALID',geo_status:geoValid?'VALID':'LOCAL_BLOCK',limitations:limits,utc_parts:{year,month,day,hour:hour+minute/60+(second+Number('0.'+(m[7]??'0')))/3600}};
 }

@@ -55,7 +55,7 @@ test('K02 UTC conversion matches JD and supports planets without geography',asyn
  const r=await callK02(k02);assert.equal(r.status,200);const b=await r.json();
  assert.equal(b.jd_ut,2451545);assert.deepEqual(b.input_echo,k02);assert.equal(b.valid_planet_count,10);
  const inconsistent=await callK02({...k02,UTC_OFFSET_EFFECTIVE:'+09:00'});assert.equal(inconsistent.status,422);const rejected=await inconsistent.json();assert.equal(rejected.error,'K02_UTC_OFFSET_MISMATCH');assert.equal(rejected.calculation_performed,false);
- assert.equal(b.time_consistency_status,'ARITHMETICALLY_CONSISTENT');
+ assert.equal(b.time_consistency_status,'ARITHMETICALLY_CONSISTENT');assert.equal(b.timezone_audit.k02_declared_version,k02.TZDB_VERSION);assert.equal(b.timezone_audit.production_eligible,false);
  assert.equal(b.positions[0].sign,'CAPRICORN');assert.equal(b.positions[0].motion,'DIRECT');assert.equal(b.positions[0].station_sensitive,null);
  assert.equal(b.aspects.pair_count,45);assert.equal(b.aspects.available_pair_count,45);assert.equal(b.aspects.scope,'SINGLE_INSTANT');
  const noGeo={...k02,LATITUDE:null,LONGITUDE:null,GEO_PRECISION:'UNAVAILABLE',GEO_STATUS:'UNAVAILABLE'};
