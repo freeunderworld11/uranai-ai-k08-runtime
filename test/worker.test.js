@@ -11,6 +11,30 @@ const input={jd_ut:2451545,latitude:35.6762,longitude:139.6503};
 const call=(body=input)=>worker.fetch('/calculate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
 const callK02=body=>worker.fetch('/calculate/k02',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
 const planetCore=positions=>positions.map(p=>Object.fromEntries(Object.entries(p).filter(([k])=>!k.startsWith('house'))));
+test('K19 CASE_A fixed K02 input matches native planets, angles, cusps and all aspect states',async()=>{
+ const f=JSON.parse(readFileSync(new URL('./fixtures/case-a.json',import.meta.url),'utf8'));
+ const response=await callK02(f.input);assert.equal(response.status,200);
+ const b=await response.json(),e=f.expected,t=f.tolerance;
+ const angle=(actual,expected,tolerance,label)=>{
+  assert.ok(Number.isFinite(actual),label+' finite');
+  const difference=Math.abs(actual-expected)%360;
+  assert.ok(Math.min(difference,360-difference)<=tolerance,label);
+ };
+ assert.deepEqual(b.input_echo,f.input);assert.equal(b.jd_ut,e.jd_ut);
+ assert.equal(b.positions.length,10);assert.equal(b.result_status,'COMPLETE');
+ for(const [body,p] of Object.entries(e.planets)){
+  const actual=b.positions.find(v=>v.body===body);assert.equal(actual.status,'VALID');
+  angle(actual.longitude,p.longitude,t.longitude_degrees,body+' longitude');
+  assert.ok(Math.abs(actual.longitude_speed-p.longitude_speed)<=t.speed_degrees_per_day,body+' speed');
+  assert.equal(actual.return_flag,258);
+ }
+ assert.equal(b.houses.status,'VALID');assert.equal(b.houses.system,'PLACIDUS');assert.equal(b.houses.return_flag,0);
+ angle(b.houses.asc,e.asc,t.angle_degrees,'ASC');angle(b.houses.mc,e.mc,t.angle_degrees,'MC');
+ assert.equal(b.houses.cusps.length,12);b.houses.cusps.forEach((v,i)=>angle(v,e.cusps[i],t.cusp_degrees,'cusp '+(i+1)));
+ assert.deepEqual(b.aspects.pairs.map(p=>({body_a:p.body_a,body_b:p.body_b,status:p.status,aspect:p.aspect??null})),e.aspects);
+ assert.equal(b.K08_AUDIT.ASPECT_45_PAIRS_VALID,true);
+ assert.equal(b.K08_AUDIT.REGRESSION_SUITE_VALID,null);assert.equal(b.K09_USAGE_STATUS,'LOCAL_BLOCK');
+});
 test('K02 solar boundary service matches native equinox reference',async()=>{
  const body={TARGET_SOLAR_LONGITUDE_DEG:0,SEARCH_START_UTC:'2000-03-20T00:00:00Z',SEARCH_END_UTC:'2000-03-21T00:00:00Z',TIME_SCALE_REQUIREMENT:'UT',K02_VERSION:'K02_v2.4_PRODUCTION'};
  const r=await worker.fetch('/calculate/solar-boundary',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});

@@ -242,3 +242,8 @@ POST /calculate/solar-boundary はK08_SOLAR_LONGITUDE_BOUNDARY_SERVICE_v1の開�
 
 [固定ケース・Deployment Gate対応表](docs/K19_COVERAGE.md)に既存の証拠と未完了項目を整理しました。10天体と45組の重複・欠落、所属番号の異常を監査で検出します。構造検査の成功はK19全受入試験の合格を意味しません。
 
+
+## CASE_A固定回帰テスト
+
+[CASE_Aの検証条件](docs/CASE_A.md)と固定期待値を追加しました。東京・2000年1月1日21時のK02入力を使い、native参照との10天体・ASC/MC・12カスプ・45組のアスペクト成立状態の照合を行います。追加後の全72テストが成功しました。K19全体の承認は未完了です。
+
