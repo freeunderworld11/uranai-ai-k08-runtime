@@ -11,7 +11,7 @@ const input={jd_ut:2451545,latitude:35.6762,longitude:139.6503};
 const call=(body=input)=>worker.fetch('/calculate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
 const callK02=body=>worker.fetch('/calculate/k02',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
 const planetCore=positions=>positions.map(p=>Object.fromEntries(Object.entries(p).filter(([k])=>!k.startsWith('house'))));
-for(const caseName of ['case-a','case-b','case-c','case-d','case-e-before','case-e-after','case-f-before','case-f-after','case-g-before','case-g-after','case-h','case-i-before','case-i-after'])test(`K19 ${caseName} fixed K02 input matches native planets, angles, cusps and all aspect states`,async()=>{
+for(const caseName of ['case-a','case-b','case-c','case-d','case-e-before','case-e-after','case-f-before','case-f-after','case-g-before','case-g-after','case-h','case-i-before','case-i-after','case-j'])test(`K19 ${caseName} fixed K02 input matches native planets, angles, cusps and all aspect states`,async()=>{
  const f=JSON.parse(readFileSync(new URL(`./fixtures/${caseName}.json`,import.meta.url),'utf8'));
  const response=await callK02(f.input);assert.equal(response.status,200);
  const b=await response.json(),e=f.expected,t=f.tolerance;
@@ -21,7 +21,7 @@ for(const caseName of ['case-a','case-b','case-c','case-d','case-e-before','case
   assert.ok(Math.min(difference,360-difference)<=tolerance,label);
  };
  assert.deepEqual(b.input_echo,f.input);assert.ok(Math.abs(b.jd_ut-e.jd_ut)<1e-9);
- assert.equal(b.positions.length,10);assert.equal(b.result_status,caseName.startsWith('case-e')?'PARTIAL':'COMPLETE');
+ assert.equal(b.positions.length,10);assert.equal(b.result_status,(caseName.startsWith('case-e')||caseName==='case-j')?'PARTIAL':'COMPLETE');
  if(caseName.startsWith('case-e')){assert.equal(b.time_status,'CONDITIONAL');assert.ok(b.limitations.includes('HISTORICAL_TIME_CONDITIONAL'));}
  for(const [body,p] of Object.entries(e.planets)){
   const actual=b.positions.find(v=>v.body===body);assert.equal(actual.status,'VALID');
@@ -29,9 +29,18 @@ for(const caseName of ['case-a','case-b','case-c','case-d','case-e-before','case
   assert.ok(Math.abs(actual.longitude_speed-p.longitude_speed)<=t.speed_degrees_per_day,body+' speed');
   assert.equal(actual.return_flag,258);
  }
- assert.equal(b.houses.status,'VALID');assert.equal(b.houses.system,'PLACIDUS');assert.equal(b.houses.return_flag,0);
+ if(caseName==='case-j'){
+  assert.equal(b.houses.status,e.house_status);assert.equal(b.houses.system,null);assert.ok(b.houses.return_flag<0);
+  assert.equal(b.houses.fallback_detected,true);assert.equal(b.houses.cusps,undefined);
+  assert.equal(b.houses.asc_status,'CONDITIONAL');assert.equal(b.houses.mc_status,'CONDITIONAL');
+  assert.equal(b.K08_NATAL_RESULT.HOUSES.CUSPS,null);
+  for(let i=1;i<=12;i++)assert.equal(b.K08_HOUSE_RESULT['CUSP_'+i],null);
+  assert.ok(b.positions.every(p=>p.house_status!=='VALID'&&p.house==null));
+ }else{
+  assert.equal(b.houses.status,'VALID');assert.equal(b.houses.system,'PLACIDUS');assert.equal(b.houses.return_flag,0);
+  assert.equal(b.houses.cusps.length,12);b.houses.cusps.forEach((v,i)=>angle(v,e.cusps[i],t.cusp_degrees,'cusp '+(i+1)));
+ }
  angle(b.houses.asc,e.asc,t.angle_degrees,'ASC');angle(b.houses.mc,e.mc,t.angle_degrees,'MC');
- assert.equal(b.houses.cusps.length,12);b.houses.cusps.forEach((v,i)=>angle(v,e.cusps[i],t.cusp_degrees,'cusp '+(i+1)));
  assert.deepEqual(b.aspects.pairs.map(p=>({body_a:p.body_a,body_b:p.body_b,status:p.status,aspect:p.aspect??null})),e.aspects);
  assert.equal(b.K08_AUDIT.ASPECT_45_PAIRS_VALID,true);
  if(caseName.startsWith('case-i')){
