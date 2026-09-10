@@ -15,6 +15,7 @@ test('planet houses match native swetest at J2000 Tokyo',async()=>{
  const b=await (await call()).json();
  const expected=[5.1460597,3.4592438,4.8796420,3.9938010,6.7209662,8.8702119,9.3548770,6.2600946,5.8755633,4.3451555];
  b.positions.forEach((p,i)=>{assert.equal(p.house,Math.floor(expected[i]));assert.ok(Math.abs(p.house_position-expected[i])<1e-6);});
+ b.positions.forEach(p=>{assert.equal(p.house_cusp_status,'VALID');assert.equal(typeof p.house_cusp_sensitive,'boolean');assert.ok(p.house_cusp_distance_degrees>=0);});
 });
 test('solar 0-degree crossing agrees with native Swiss Ephemeris reference bracket',async()=>{
  // Official swetest64 2.10.03, -b20.3.2000 -ut07:35:14 / :15 -p0 -fPls -eswe:
