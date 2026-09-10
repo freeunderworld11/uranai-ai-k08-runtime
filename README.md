@@ -122,19 +122,19 @@ UNAVAILABLE天体には派生値を追加しません。時刻範囲APIには代
 
 ### 明示UTC範囲の予備検査
 
-v2では範囲の整合性検査を追加しました。旧v1の任意のUTC範囲は受理されない場合があります。UTCの両端は秒単位で、終了を含みます。
+v2で範囲の整合性検査を追加し、v3で概算時刻の保存と日付をまたぐ明示範囲を追加しました。旧v1の任意のUTC範囲は受理されない場合があります。UTCの両端は秒単位で、終了を含みます。
 
 | TIME_PRECISION | 入力条件 |
 | --- | --- |
 | UNKNOWN | NORMALIZED_BIRTH_TIME / LOCAL_CIVIL_DATETIME / UTC_DATETIMEはnull。出生地の当日00:00:00〜23:59:59に両端が一致すること。 |
 | HOUR | この追加APIのNORMALIZED_BIRTH_TIMEは時だけの2桁文字列（例 `14`）。LOCAL_CIVIL_DATETIME / UTC_DATETIMEはnull。その時の00分00秒〜59分59秒と一致し、UTC幅が3599秒であること。 |
-| APPROXIMATE | 上記3つの単一時刻欄はnull。外側に `local_range: {start_local: "2000-01-01T13:30:00", end_local: "2000-01-01T14:30:00"}` を明示。UTC両端を出生地時刻に戻した値と一致すること。 |
+| APPROXIMATE | UTC_DATETIMEはnull。概算時刻欄は保持可能（下記参照）。外側に `local_range: {start_local: "2000-01-01T13:30:00", end_local: "2000-01-01T14:30:00"}` を明示。UTC両端を出生地時刻に戻した値と一致すること。 |
 
-HOURの2桁表現とlocal_rangeは追加APIの取り決めであり、K02正本自体の機械形式を確定するものではありません。APPROXIMATEで日付をまたぐ範囲は現在は拒否します。UNKNOWNは夏時間の23時間・25時間の日に対応しますが、現地の午前0時が存在しない歴史的な日などは別途扱いが必要です。曖昧時刻の判定はK02のLOCAL_TIME_STATUSに依存し、この検査だけで再認証しません。
+HOURの2桁表現とlocal_rangeは追加APIの取り決めであり、K02正本自体の機械形式を確定するものではありません。APPROXIMATEは明示された日付付き範囲なら日付をまたいで受け付けます。UNKNOWNは夏時間の23時間・25時間の日に対応しますが、現地の午前0時が存在しない歴史的な日などは別途扱いが必要です。曖昧時刻の判定はK02のLOCAL_TIME_STATUSに依存し、この検査だけで再認証しません。
 
 矛盾は422で拒否し、天体計算に進めません。受理時も `range_consistency_status: CONDITIONAL` と、版照合未完了の制限を返します。元の入力値を訂正・補完しません。
 
-`POST /calculate/k02/range` は `{ "k02": <正本19項目>, "start_utc": <UTC文字列>, "end_utc": <UTC文字列> }` を受け取ります。これは `K08_EXPLICIT_UTC_RANGE_v2` という追加の入出力形式であり、K02正本19項目の変更ではありません。TIME_PRECISIONはHOUR/APPROXIMATE/UNKNOWNのみ。両端は通常APIと同じ厳密なUTC形式・1900〜2099年、開始より終了が後、最大26時間です。範囲は両端を含み、切り詰めません。
+`POST /calculate/k02/range` は `{ "k02": <正本19項目>, "start_utc": <UTC文字列>, "end_utc": <UTC文字列> }` を受け取ります。これは `K08_EXPLICIT_UTC_RANGE_v3` という追加の入出力形式であり、K02正本19項目の変更ではありません。TIME_PRECISIONはHOUR/APPROXIMATE/UNKNOWNのみ。両端は通常APIと同じ厳密なUTC形式・1900〜2099年、開始より終了が後、最大26時間です。範囲は両端を含み、切り詰めません。
 
 呼出元が確認済みの範囲を明示してください。Runtimeは正午・午前0時・概算幅を補いません。現地日付・精度・UTC両端の対応を実行環境のIntlで検査します。K02のTZDB_VERSIONとの版一致は未確認のため、正式な時間範囲監査の代替にはなりません。曖昧な現地時刻、未確認タイムゾーン、受理不可の監査状態は停止します。元の入力はinput_echoに保存します。
 
@@ -193,3 +193,11 @@ Placidusが負の返却コードで代替計算になった場合、同じ日時
 このAPIの表現は日付YYYY-MM-DD、SECOND時刻HH:mm:ss、MINUTE時刻HH:mmまたはHH:mm:00、LOCAL_CIVIL_DATETIMEはYYYY-MM-DDTHH:mm:ssです。offsetは符号付きHH:mmまたはHH:mm:ss（時は00〜23）を受け付けます。分精度に非ゼロ秒は入れられません。秒未満UTCは、秒単位の現地日時と整合しない場合は拒否されます。資料自体の機械型を新たに規定するものではありません。
 
 成功時はtime_consistency_status=ARITHMETICALLY_CONSISTENTと派生値derived_utc_offset_secondsを返します。算術的な一致であり、そのoffsetが地域・年代の正式時刻規則に正しいことやTZDB版の認証ではありません。範囲APIは別の両端整合性検査を使い、単一offsetを全範囲に流用しません。全53テストとビルドが成功。本番承認はPENDINGです。
+
+## 概算時刻を保持する範囲契約v3
+
+APPROXIMATEではNORMALIZED_BIRTH_TIMEにHH:mmまたはHH:mm:ssの概算時刻を残せます。LOCAL_CIVIL_DATETIMEはnullまたは同じ日付・時刻のYYYY-MM-DDTHH:mm:ssです。両方nullの従来入力も受理します。UTC_DATETIMEはnullを維持し、概算中心を確定出生時刻として計算しません。input_echoは元の表現とTIME_PRECISIONを保持します。
+
+日付付きlocal_rangeとUTC両端の一致を確認し、概算中心があれば指定範囲内にあること、中心がなければ出生現地日と範囲が重なることを検査します。許容幅・中点を生成せず、範囲を切り詰めません。最大26時間・対応年・探索上限は従来どおりです。概算中心のタイムゾーン上の曖昧性を新たに認証する機能ではなく、K02の状態と既存のCONDITIONAL制限を引き継ぎます。
+
+v2の正当な入力は引き続き受理しますが、応答range_contractはv3に変わります。呼出側で固定版を検査している場合は更新が必要です。全56テストとビルドが成功。本番承認はPENDINGです。

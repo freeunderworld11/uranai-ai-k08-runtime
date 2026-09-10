@@ -11,6 +11,11 @@ const input={jd_ut:2451545,latitude:35.6762,longitude:139.6503};
 const call=(body=input)=>worker.fetch('/calculate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
 const callK02=body=>worker.fetch('/calculate/k02',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
 const planetCore=positions=>positions.map(p=>Object.fromEntries(Object.entries(p).filter(([k])=>!k.startsWith('house'))));
+test('approximate overnight request retains center without calculating a substitute instant',async()=>{
+ const body={k02:{...k02,TIME_PRECISION:'APPROXIMATE',NORMALIZED_BIRTH_TIME:'00:15',LOCAL_CIVIL_DATETIME:'2000-01-01T00:15:00',UTC_DATETIME:null},start_utc:'1999-12-31T23:30:00Z',end_utc:'2000-01-01T01:00:00Z',local_range:{start_local:'1999-12-31T23:30:00',end_local:'2000-01-01T01:00:00'}};
+ const r=await worker.fetch('/calculate/k02/range',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+ assert.equal(r.status,200);const b=await r.json();assert.deepEqual(b.input_echo,body);assert.equal(b.jd_ut,undefined);assert.equal(b.range_contract,'K08_EXPLICIT_UTC_RANGE_v3');assert.equal(b.time_status,'CONDITIONAL');
+});
 test('planet houses match native swetest at J2000 Tokyo',async()=>{
  const b=await (await call()).json();
  const expected=[5.1460597,3.4592438,4.8796420,3.9938010,6.7209662,8.8702119,9.3548770,6.2600946,5.8755633,4.3451555];
@@ -38,7 +43,7 @@ test('explicit K02 range runs in Workers without selecting a birth instant',asyn
  assert.equal(b.jd_ut,undefined);assert.equal(b.houses.asc_status,'UNAVAILABLE');assert.ok(b.positions.every(p=>p.SIGN_STABLE_WITHOUT_TIME!==true));
  const bad=await worker.fetch('/calculate/k02/range',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...input,end_utc:'2000-01-01T12:00:00Z'})});
  assert.equal(bad.status,422);const rejected=await bad.json();assert.equal(rejected.calculation_performed,false);assert.equal(rejected.positions,undefined);
- assert.equal(b.range_contract,'K08_EXPLICIT_UTC_RANGE_v2');assert.equal(b.range_consistency_status,'CONDITIONAL');
+ assert.equal(b.range_contract,'K08_EXPLICIT_UTC_RANGE_v3');assert.equal(b.range_consistency_status,'CONDITIONAL');
  assert.equal(b.aspects.scope,'EXPLICIT_UTC_RANGE');assert.equal(b.aspects.pair_count,45);
  assert.equal(b.aspects.evaluated_sample_count,b.evaluated_sample_count);
  assert.ok(b.aspects.pairs.every(p=>p.STABLE_WITHOUT_TIME!==true));

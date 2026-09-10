@@ -32,3 +32,14 @@ test('approximate precision requires explicit matching local limits',()=>{
  assert.ok(adaptRange({...r,local_range}).consistency);
  assert.throws(()=>adaptRange({...r,local_range:{...local_range,end_local:'2000-01-01T15:00:00'}}));
 });
+const overnight={k02:{...source,TIME_PRECISION:'APPROXIMATE',NORMALIZED_BIRTH_TIME:'00:15',LOCAL_CIVIL_DATETIME:'2000-01-01T00:15:00'},start_utc:'1999-12-31T23:30:00Z',end_utc:'2000-01-01T01:00:00Z',local_range:{start_local:'1999-12-31T23:30:00',end_local:'2000-01-01T01:00:00'}};
+test('explicit overnight range preserves approximate center and original precision',()=>{
+ const original=structuredClone(overnight);const r=adaptRange(overnight);
+ assert.deepEqual(r.input_echo,original);assert.deepEqual(overnight,original);assert.equal(r.duration,5400000);
+ assert.equal(r.input_echo.k02.TIME_PRECISION,'APPROXIMATE');
+ assert.ok(adaptRange({...overnight,k02:{...overnight.k02,NORMALIZED_BIRTH_TIME:null,LOCAL_CIVIL_DATETIME:null}}).consistency);
+});
+test('approximate center must match its fields and be inside explicit limits',()=>{
+ for(const patch of [{NORMALIZED_BIRTH_TIME:'02:00',LOCAL_CIVIL_DATETIME:null},{LOCAL_CIVIL_DATETIME:'2000-01-01T00:30:00'},{NORMALIZED_BIRTH_TIME:'24:00'},{NORMALIZED_BIRTH_TIME:null},{NORMALIZED_BIRTH_DATE:'2000-02-30'}])assert.throws(()=>adaptRange({...overnight,k02:{...overnight.k02,...patch}}));
+ assert.throws(()=>adaptRange({...overnight,local_range:undefined}));
+});

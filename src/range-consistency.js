@@ -29,8 +29,18 @@ export function checkRangeConsistency(input) {
     const r=input.local_range;
     if(!r || typeof r!=='object' || Array.isArray(r) || Object.keys(r).sort().join(',')!=='end_local,start_local')fail('APPROXIMATE_LOCAL_RANGE_REQUIRED');
     if(start!==r.start_local || end!==r.end_local || start>end)fail('RANGE_APPROXIMATE_MISMATCH');
-    if(!start.startsWith(date+'T') || !end.startsWith(date+'T'))fail('RANGE_APPROXIMATE_DATE_MISMATCH');
-    if(s.NORMALIZED_BIRTH_TIME!==null || s.LOCAL_CIVIL_DATETIME!==null)fail('APPROXIMATE_USE_EXPLICIT_RANGE');
+    const birthDay=Date.parse(date+'T00:00:00Z');
+    if(!Number.isFinite(birthDay)||new Date(birthDay).toISOString().slice(0,10)!==date)fail('RANGE_BIRTH_DATE_INVALID');
+    if(s.NORMALIZED_BIRTH_TIME===null) {
+      if(s.LOCAL_CIVIL_DATETIME!==null)fail('APPROXIMATE_CENTER_FIELDS_MISMATCH');
+      if(end<date+'T00:00:00'||start>date+'T23:59:59')fail('RANGE_APPROXIMATE_DATE_MISMATCH');
+    } else {
+      const time=s.NORMALIZED_BIRTH_TIME;
+      if(!/^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/.test(time))fail('APPROXIMATE_CENTER_INVALID');
+      const center=date+'T'+(time.length===5?time+':00':time);
+      if(s.LOCAL_CIVIL_DATETIME!==null&&s.LOCAL_CIVIL_DATETIME!==center)fail('APPROXIMATE_CENTER_FIELDS_MISMATCH');
+      if(center<start||center>end)fail('APPROXIMATE_CENTER_OUTSIDE_RANGE');
+    }
   }
   return {range_consistency_status:'CONDITIONAL',range_consistency_method:'RUNTIME_INTL_ENDPOINT_CHECK',
     verified_local_range:{start_local:start,end_local:end},
