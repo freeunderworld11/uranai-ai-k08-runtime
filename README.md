@@ -33,7 +33,7 @@ npm run dev
 
 `POST /calculate/k02` はK02_TO_K08_ASTRO_TIME_GEO_v1の19項目をJSONオブジェクトとして直接受け取ります。フィールド名は [src/k02-adapter.js](src/k02-adapter.js) のK02_FIELDS、入力例は [test/fixtures/k02.js](test/fixtures/k02.js) を参照してください。入力例のTZDB_VERSIONは試験用の値で、承認済みTZDBを意味しません。
 
-機械用の暫定表現として、緯度・経度は数値またはnull、残りは文字列またはnull。すべてのキーを含め、不明値はnullとします。UTCは `YYYY-MM-DDTHH:mm:ss[.SSS]Z`、うるう秒表記・不正日付・24時は拒否。offsetは元の文字列を保存するだけで計算に使用せず、K02のUTCを別の時差で置換しません。
+機械用の暫定表現として、緯度・経度は数値またはnull、残りは文字列またはnull。すべてのキーを含め、不明値はnullとします。UTCは `YYYY-MM-DDTHH:mm:ss[.SSS]Z`、うるう秒表記・不正日付・24時は拒否。offsetは元の文字列を保存し、日時の整合性検査にだけ使用して、K02のUTCを別の時差で置換しません。
 
 K02_v2.4_PRODUCTIONとPASS/PARTIAL_PASSを確認し、LOCAL_TIME_STATUS=NORMAL、TIMEZONE_STATUS=CONFIRMEDおよびtimezone ID・TZDB版の記録が必要です。利用可能なUTCをSwiss EphemerisのjulianDayで変換し、input_echoに元の19項目、derived_runtime_valueに生成したJDを返します。
 
@@ -185,3 +185,11 @@ Placidusが負の返却コードで代替計算になった場合、同じ日時
 同じエンジンの計算法間の一致であり、独立エンジンによる認証ではありません。house.statusはUNAVAILABLE_PLACIDUS、systemはnullのままです。基盤のメタデータ破損や未知の例外は全体停止します。
 
 公式swetest64 2.10.03、JD2451545、東経18.9553・北緯69.6492、P/EでASC=299.0790476、MC=297.3499015を確認し、Workers結果と差1e-6度未満で一致しました。全51テストとビルドが成功。本番承認・全高緯度条件の正式監査は未完了です。
+
+## 単一時点の日時整合性
+
+/calculate/k02は、NORMALIZED_BIRTH_DATEとNORMALIZED_BIRTH_TIMEがLOCAL_CIVIL_DATETIMEに一致し、現地日時からUTC_OFFSET_EFFECTIVEを引いた瞬間がUTC_DATETIMEと一致することを確認します。不一致は422で計算前に拒否し、元値を補正しません。
+
+このAPIの表現は日付YYYY-MM-DD、SECOND時刻HH:mm:ss、MINUTE時刻HH:mmまたはHH:mm:00、LOCAL_CIVIL_DATETIMEはYYYY-MM-DDTHH:mm:ssです。offsetは符号付きHH:mmまたはHH:mm:ss（時は00〜23）を受け付けます。分精度に非ゼロ秒は入れられません。秒未満UTCは、秒単位の現地日時と整合しない場合は拒否されます。資料自体の機械型を新たに規定するものではありません。
+
+成功時はtime_consistency_status=ARITHMETICALLY_CONSISTENTと派生値derived_utc_offset_secondsを返します。算術的な一致であり、そのoffsetが地域・年代の正式時刻規則に正しいことやTZDB版の認証ではありません。範囲APIは別の両端整合性検査を使い、単一offsetを全範囲に流用しません。全53テストとビルドが成功。本番承認はPENDINGです。

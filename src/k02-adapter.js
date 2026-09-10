@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import {CalculationError} from './calculation.js';
+import {checkTimeConsistency} from './time-consistency.js';
 export const K02_FIELDS = ['NORMALIZED_BIRTH_DATE','NORMALIZED_BIRTH_TIME','TIME_PRECISION','LOCAL_CIVIL_DATETIME','PLACE_NORMALIZED','LATITUDE','LONGITUDE','GEO_PRECISION','GEO_STATUS','TIMEZONE_ID','TIMEZONE_STATUS','TZDB_VERSION','PRE_1970_CONFIDENCE','DST_STATUS','LOCAL_TIME_STATUS','UTC_OFFSET_EFFECTIVE','UTC_DATETIME','K02_AUDIT_STATUS','K02_VERSION'];
-export function adaptK02(source) {
+export function adaptK02(source,{rangeEndpoint=false}={}) {
   if (!source || typeof source !== 'object' || Array.isArray(source) || K02_FIELDS.some(k=>!Object.hasOwn(source,k)) || Object.keys(source).some(k=>!K02_FIELDS.includes(k))) throw new CalculationError('K02_SCHEMA_ERROR',400);
   for(const key of K02_FIELDS) {
     const value=source[key];
@@ -31,5 +32,5 @@ export function adaptK02(source) {
   if(source.K02_AUDIT_STATUS==='PARTIAL_PASS')limits.push('K02_PARTIAL_PASS');
   const geoValid=source.GEO_STATUS==='CONFIRMED' && ['EXACT','CITY_CENTER'].includes(source.GEO_PRECISION) && Number.isFinite(source.LATITUDE)&&Math.abs(source.LATITUDE)<=90&&Number.isFinite(source.LONGITUDE)&&Math.abs(source.LONGITUDE)<=180;
   if(!geoValid)limits.push('GEO_DEPENDENT_RESULTS_BLOCKED');
-  return {input_echo,time_status:limits.some(x=>x!=='GEO_DEPENDENT_RESULTS_BLOCKED')?'CONDITIONAL':'VALID',geo_status:geoValid?'VALID':'LOCAL_BLOCK',limitations:limits,utc_parts:{year,month,day,hour:hour+minute/60+(second+Number('0.'+(m[7]??'0')))/3600}};
+  return {...(rangeEndpoint?{}:checkTimeConsistency(source)),input_echo,time_status:limits.some(x=>x!=='GEO_DEPENDENT_RESULTS_BLOCKED')?'CONDITIONAL':'VALID',geo_status:geoValid?'VALID':'LOCAL_BLOCK',limitations:limits,utc_parts:{year,month,day,hour:hour+minute/60+(second+Number('0.'+(m[7]??'0')))/3600}};
 }

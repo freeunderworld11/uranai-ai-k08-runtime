@@ -12,7 +12,7 @@ export function adaptRange(input) {
   const source=input.k02;
   adaptK02(source); // Validate the original schema before deriving endpoint requests.
   if(!['HOUR','APPROXIMATE','UNKNOWN'].includes(source.TIME_PRECISION))throw new CalculationError('RANGE_PRECISION_INVALID',400);
-  const endpoints=[input.start_utc,input.end_utc].map(utc=>adaptK02({...source,TIME_PRECISION:'SECOND',UTC_DATETIME:utc}));
+  const endpoints=[input.start_utc,input.end_utc].map(utc=>adaptK02({...source,TIME_PRECISION:'SECOND',UTC_DATETIME:utc},{rangeEndpoint:true}));
   const blocked=endpoints.find(e=>!e.utc_parts);
   const echo={input_echo:structuredClone(input),input_contract:'K02_TO_K08_ASTRO_TIME_GEO_v1',range_contract:'K08_EXPLICIT_UTC_RANGE_v2'};
   if(blocked)return {...echo,result_status:'UNAVAILABLE',limitations:blocked.limitations};
