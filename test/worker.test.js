@@ -36,8 +36,10 @@ test('explicit K02 range runs in Workers without selecting a birth instant',asyn
 test('K02 UTC conversion matches JD and supports planets without geography',async()=>{
  const r=await callK02(k02);assert.equal(r.status,200);const b=await r.json();
  assert.equal(b.jd_ut,2451545);assert.deepEqual(b.input_echo,k02);assert.equal(b.valid_planet_count,10);
+ assert.equal(b.aspects.pair_count,45);assert.equal(b.aspects.available_pair_count,45);assert.equal(b.aspects.scope,'SINGLE_INSTANT');
  const noGeo={...k02,LATITUDE:null,LONGITUDE:null,GEO_PRECISION:'UNAVAILABLE',GEO_STATUS:'UNAVAILABLE'};
  const partial=await (await callK02(noGeo)).json();assert.equal(partial.houses.status,'UNAVAILABLE_GEO');assert.deepEqual(partial.positions,b.positions);
+ assert.deepEqual(partial.aspects,b.aspects);
  assert.equal(partial.result_status,'PARTIAL');
  const blocked=await callK02({...k02,LOCAL_TIME_STATUS:'AMBIGUOUS'});assert.equal(blocked.status,422);const hold=await blocked.json();assert.equal(hold.positions,undefined);assert.equal(hold.calculation_performed,false);
 });

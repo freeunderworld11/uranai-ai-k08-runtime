@@ -90,6 +90,22 @@ GET / と GET /health は200、既知パスのOPTIONSは204、非対応メソッ
 
 ## 状態分離とデータ
 
+### 単一時点のアスペクト
+
+`/calculate` と `/calculate/k02` は `aspects` を追加で返します。K08第93〜102節に従い、10天体の重複・自己組を除く45組を固定順に評価します。範囲APIには単一時点の結果を流用しません。
+
+| 種類 | 角度 | 固定許容幅 |
+| --- | --- | --- |
+| CONJUNCTION | 0° | 8° |
+| SEXTILE | 60° | 5° |
+| SQUARE | 90° | 7° |
+| TRINE | 120° | 7° |
+| OPPOSITION | 180° | 8° |
+
+最小角距離からのずれdeltaが許容幅以下ならFORMED、正常に計算できて不成立ならNOT_FORMED、依存天体の計算不可はUNAVAILABLEです。成立時は `exactness_ratio = clamp(1 - delta / orb, 0, 1)`、0.75以上TIGHT、0.40以上MODERATE、それ未満WIDEを返します。判定前の丸めや天体別の許容幅変更はしません。角度計算用に黄経を正規化しますが、元の天体結果を改変しません。
+
+1天体の失敗は関連9組だけに影響し、他の36組を保持します。NOT_FORMEDとUNAVAILABLEは区別してください。applying/separatingはINACTIVEです。scopeはSINGLE_INSTANTで、出生時刻の精度が分単位の場合も範囲全体の成立を保証しません。本番承認はPENDINGのままです。今回の追加後、全34テストが通過しました。
+
 ### 明示UTC範囲の予備検査
 
 v2では範囲の整合性検査を追加しました。旧v1の任意のUTC範囲は受理されない場合があります。UTCの両端は秒単位で、終了を含みます。
