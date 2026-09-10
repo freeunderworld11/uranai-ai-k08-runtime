@@ -231,3 +231,9 @@ POST /calculate/solar-boundary はK08_SOLAR_LONGITUDE_BOUNDARY_SERVICE_v1の開�
 到達なし、複数候補、採用不可の計算値はUNRESOLVED（HTTP 422）で時刻を返しません。基盤破損は全体停止します。名称・立春区分・月支等の意味はK02の責任で、本APIは付けません。K02専用は論理的な呼出契約であり、現在の開発用APIに呼出元認証は未実装です。本番公開前に実際の接続と時系の受入確認が必要です。
 
 2000-03-20の0度到達を公式swetest64の07:35:14〜07:35:15 UTC参照と照合しました。端点到達・未到達・入力不正・フラグ破損を含む全64テストとビルドが成功しました。
+
+## K08結果・監査形式（開発用v1）
+
+既存の応答を保持したままK08_NATAL_RESULT、K08_HOUSE_RESULT、K08_AUDIT、AVAILABLE_COMPONENTS、K08_PROVENANCEを追加しました。正常な天体結果を残し、失敗項目はnull、条件付きASC・MCは状態付きで保持します。時刻範囲から代表出生時刻や黄経を作りません。
+
+本番承認は未完了のためOVERALL_STATUS=RUNTIME_NOT_APPROVED、K09_USAGE_STATUS=LOCAL_BLOCKです。数値計算の成功は鑑定への使用許可ではありません。監査の未評価項目はnull、未承認ゲートはfalse、総合監査はFAILとします。詳細は[出力契約](docs/RESULT_CONTRACT.md)を参照してください。正式なK19受入試験は別工程です。

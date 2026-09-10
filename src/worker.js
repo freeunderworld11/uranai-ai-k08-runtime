@@ -2,6 +2,7 @@
 import { calculate, calculateK02, calculateK02Range, calculateSolarBoundary } from './runtime.js';
 import { validateInput, CalculationError } from './calculation.js';
 import {timezoneAudit} from './timezone-audit.js';
+import {withK08Result} from './k08-result.js';
 const service = "uranai-ai-k08-runtime";
 const k08Version = "K08_v2.2_PRODUCTION";
 const sourceUrl = "https://github.com/freeunderworld11/uranai-ai-k08-runtime";
@@ -56,7 +57,7 @@ export default {
         try { input = JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(buffer)); }
         catch { throw new CalculationError('INVALID_JSON',400); }
         const result = pathname === '/calculate/solar-boundary' ? await calculateSolarBoundary(input) : pathname === '/calculate/k02/range' ? await calculateK02Range(input) : pathname === '/calculate/k02' ? await calculateK02(input) : await calculate(validateInput(input));
-        return reply({service,k08_version:k08Version,api_contract:'K08_ENGINE_ADAPTER_v0.2',runtime_status:result.result_status==='COMPLETE'?'CALCULATED':result.result_status==='PARTIAL'?'PARTIAL_RESULT':'LOCAL_HOLD',calculation_performed:result.result_status!=='UNAVAILABLE',k08_deployment_gate:'PENDING',...result},result.result_status==='UNAVAILABLE'?422:200);
+        return reply({service,k08_version:k08Version,api_contract:'K08_ENGINE_ADAPTER_v0.2',runtime_status:result.result_status==='COMPLETE'?'CALCULATED':result.result_status==='PARTIAL'?'PARTIAL_RESULT':'LOCAL_HOLD',calculation_performed:result.result_status!=='UNAVAILABLE',k08_deployment_gate:'PENDING',...(pathname==='/calculate/solar-boundary'?result:withK08Result(result))},result.result_status==='UNAVAILABLE'?422:200);
       } catch (error) {
         const known = error instanceof CalculationError;
         return reply({

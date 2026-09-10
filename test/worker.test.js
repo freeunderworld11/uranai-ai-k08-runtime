@@ -25,6 +25,10 @@ test('approximate overnight request retains center without calculating a substit
 });
 test('planet houses match native swetest at J2000 Tokyo',async()=>{
  const b=await (await call()).json();
+ assert.equal(b.K09_USAGE_STATUS,'LOCAL_BLOCK');assert.equal(b.K08_NATAL_RESULT.OVERALL_STATUS,'RUNTIME_NOT_APPROVED');
+ assert.equal(b.K08_NATAL_RESULT.PLANETS.SUN.LONGITUDE,b.positions[0].longitude);
+ assert.equal(b.K08_NATAL_RESULT.ASPECTS.length,45);assert.equal(b.K08_AUDIT.OVERALL,'FAIL');
+ assert.equal(b.K08_NATAL_RESULT.TIME.UTC_DATETIME,null);
  const expected=[5.1460597,3.4592438,4.8796420,3.9938010,6.7209662,8.8702119,9.3548770,6.2600946,5.8755633,4.3451555];
  b.positions.forEach((p,i)=>{assert.equal(p.house,Math.floor(expected[i]));assert.ok(Math.abs(p.house_position-expected[i])<1e-6);});
  b.positions.forEach(p=>{assert.equal(p.house_cusp_status,'VALID');assert.equal(typeof p.house_cusp_sensitive,'boolean');assert.ok(p.house_cusp_distance_degrees>=0);});
