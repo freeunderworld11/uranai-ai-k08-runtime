@@ -10,6 +10,20 @@ after(async()=>{await worker?.stop();});
 const input={jd_ut:2451545,latitude:35.6762,longitude:139.6503};
 const call=(body=input)=>worker.fetch('/calculate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
 const callK02=body=>worker.fetch('/calculate/k02',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+test('solar 0-degree crossing agrees with native Swiss Ephemeris reference bracket',async()=>{
+ // Official swetest64 2.10.03, -b20.3.2000 -ut07:35:14 / :15 -p0 -fPls -eswe:
+ // 359.9999925 / 0.0000040 degrees, using the same sepl_18.se1 data.
+ const source={...k02,NORMALIZED_BIRTH_DATE:'2000-03-20',TIME_PRECISION:'UNKNOWN',NORMALIZED_BIRTH_TIME:null,LOCAL_CIVIL_DATETIME:null,UTC_DATETIME:null};
+ const r=await worker.fetch('/calculate/k02/range',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({k02:source,start_utc:'2000-03-20T00:00:00Z',end_utc:'2000-03-21T00:00:00Z'})});
+ assert.equal(r.status,200);const b=await r.json();const sun=b.positions[0];
+ assert.equal(sun.transition_brackets.length,1);const boundary=sun.transition_brackets[0];
+ assert.equal(boundary.from_sign_index,11);assert.equal(boundary.to_sign_index,0);
+ assert.equal(boundary.direction,'DIRECT');assert.ok(boundary.width_seconds<=1);
+ assert.ok(Date.parse(boundary.start_utc)<=Date.parse('2000-03-20T07:35:15Z'));
+ assert.ok(Date.parse(boundary.end_utc)>=Date.parse('2000-03-20T07:35:14Z'));
+ assert.ok(boundary.start_longitude>359.99);assert.ok(boundary.end_longitude<0.01);
+ assert.equal(sun.all_transitions_certified,false);assert.equal(b.search_budget_exhausted,false);
+});
 test('explicit K02 range runs in Workers without selecting a birth instant',async()=>{
  const input={k02:{...k02,TIME_PRECISION:'UNKNOWN',UTC_DATETIME:null},start_utc:'2000-01-01T00:00:00Z',end_utc:'2000-01-02T00:00:00Z'};
  const r=await worker.fetch('/calculate/k02/range',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(input)});

@@ -98,7 +98,13 @@ GET / と GET /health は200、既知パスのOPTIONSは204、非対応メソッ
 
 最大5分間隔（最大313点）で10天体を検査します。observed_sign_indicesは牡羊座=0〜魚座=11。複数サインを観測した天体だけSIGN_TIME_DEPENDENT=true、SIGN_STABLE_WITHOUT_TIME=falseです。サンプルが一致しても間の変化を否定できないため、両フラグはnull、status=CONDITIONALとします。1点でも失敗した天体はUNAVAILABLEですが、複数サインを既に観測した場合はTIME_DEPENDENTを保持します。failed_sample_countで欠落を確認できます。他の正常天体は残します。
 
-代表時刻の黄経や出生図を返しません。ASC・MC・ハウス、アスペクトの範囲判定、境界時刻の精密探索は未実装です。範囲応答はCOMPLETEにならず、本番承認もPENDINGです。24時間・289点のローカルWorkers実行を含む20テストを通過。実環境のCPU上限への適合は別途確認が必要です。
+各天体の `transition_brackets` に、観測できたサイン切り替わりを挟むUTC区間を返します。異なる隣接サインの間を二分探索し、区間幅を1秒以内に絞ります。from_sign_index / to_sign_index、境界黄経、DIRECT / RETROGRADE、両端黄経を付けます。0度をまたぐ場合にも対応します。5分格子の両端で黄経速度の符号が反転した場合は速度ゼロ付近を探して区間を分割し、往復の切り替わりを調べます。
+
+失敗点をまたいで境界を作りません。失敗または探索上限到達は `boundary_search_status: INCOMPLETE` と `unresolved_interval_count` に記録し、取得済みの境界や他の正常天体を保持します。初期格子は `sample_count`、追加探索を含む実評価点数は `evaluated_sample_count` です。リクエストごとの上限は2048点で、上限到達時は `search_budget_exhausted: true`。これは実環境のCPU時間制限への適合保証ではありません。
+
+1秒は数値探索の区間幅で、入力時刻・時系変換・天文モデルの絶対精度ではありません。UTC文字列はミリ秒に丸めます。格子間に隠れた複数の折り返しや境界への接触を完全検出したとは断定せず、`all_transitions_certified` は常にfalseです。`OBSERVED_TRANSITIONS_REFINED` も全境界の網羅を意味しません。SIGN_STABLE_WITHOUT_TIME=trueは返しません。
+
+代表時刻の出生図を返しません。ASC・MC・ハウス、アスペクトの範囲判定は未実装です。範囲応答はCOMPLETEにならず、本番承認もPENDINGです。24時間のローカルWorkers実行、標準実行版との太陽境界照合、逆行・0度通過・折り返し・失敗・探索上限を含む26テストを通過しました。
 
 1リクエストごとにWASMインスタンスを生成し、暦ファイルを配置して計算し、finallyでdisposeします。天体設定や入力を別リクエストと共有しません。
 3ファイルはビルドに同梱され、計算時の外部通信はありません。対応範囲はデータ全体より狭く制限しています。
