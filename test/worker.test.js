@@ -11,7 +11,7 @@ const input={jd_ut:2451545,latitude:35.6762,longitude:139.6503};
 const call=(body=input)=>worker.fetch('/calculate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
 const callK02=body=>worker.fetch('/calculate/k02',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
 const planetCore=positions=>positions.map(p=>Object.fromEntries(Object.entries(p).filter(([k])=>!k.startsWith('house'))));
-for(const caseName of ['case-a','case-b','case-c','case-d','case-e-before','case-e-after','case-f-before','case-f-after','case-g-before','case-g-after','case-h','case-i-before','case-i-after','case-j'])test(`K19 ${caseName} fixed K02 input matches native planets, angles, cusps and all aspect states`,async()=>{
+for(const caseName of ['case-a','case-b','case-c','case-d','case-e-before','case-e-after','case-f-before','case-f-after','case-g-before','case-g-after','case-h','case-i-before','case-i-after','case-j','case-k'])test(`K19 ${caseName} fixed K02 input matches native planets, angles, cusps and all aspect states`,async()=>{
  const f=JSON.parse(readFileSync(new URL(`./fixtures/${caseName}.json`,import.meta.url),'utf8'));
  const response=await callK02(f.input);assert.equal(response.status,200);
  const b=await response.json(),e=f.expected,t=f.tolerance;
@@ -43,6 +43,17 @@ for(const caseName of ['case-a','case-b','case-c','case-d','case-e-before','case
  angle(b.houses.asc,e.asc,t.angle_degrees,'ASC');angle(b.houses.mc,e.mc,t.angle_degrees,'MC');
  assert.deepEqual(b.aspects.pairs.map(p=>({body_a:p.body_a,body_b:p.body_b,status:p.status,aspect:p.aspect??null})),e.aspects);
  assert.equal(b.K08_AUDIT.ASPECT_45_PAIRS_VALID,true);
+ if(caseName==='case-k'){
+  const sun=b.positions.find(p=>p.body==='SUN');
+  assert.ok(sun.longitude>0&&sun.longitude<0.1);assert.equal(sun.sign,'ARIES');
+  assert.equal(sun.sign_index,0);assert.equal(sun.sign_boundary_sensitive,true);
+  assert.ok(Math.abs(sun.sign_degree-e.planets.SUN.longitude)<1e-6);
+  assert.ok(b.positions.every(p=>p.longitude>=0&&p.longitude<360));
+  const pair=b.aspects.pairs.find(p=>p.body_a==='SUN'&&p.body_b==='NEPTUNE');
+  assert.ok(Math.abs(pair.angle_distance-e.sun_neptune_distance)<1e-6);
+  assert.ok(pair.angle_distance<180);
+  assert.equal(pair.status,e.aspects.find(p=>p.body_a==='SUN'&&p.body_b==='NEPTUNE').status);
+ }
  if(caseName.startsWith('case-i')){
   const mercury=b.positions.find(p=>p.body==='MERCURY');
   assert.equal(mercury.motion,e.mercury_motion);
