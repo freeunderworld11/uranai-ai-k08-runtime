@@ -15,20 +15,37 @@ export function validateInput(input) {
   return {jd_ut,latitude,longitude};
 }
 function finite(values) { if (!values.every(Number.isFinite)) throw new CalculationError('INVALID_ENGINE_OUTPUT',503); }
+function globalFailure() { throw new CalculationError('GLOBAL_RUNTIME_FAIL',503); }
+function engineError(error, fn) { return error?.name === 'SwissEphError' && error.fn === fn; }
 export function calculateWith(swe, input) {
+  input = validateInput(input);
   if (swe.version !== '2.10.03') throw new CalculationError('RUNTIME_VERSION_MISMATCH',503);
   const {jd_ut,latitude,longitude} = input;
   const positions = BODIES.map((body,id)=>{
-    const p = swe.calc(jd_ut,id,{ephemeris:'swiss'});
-    if (p.ephemeris !== 'swiss' || p.returnFlags !== FLAGS || p.warning) throw new CalculationError('EPHEMERIS_FALLBACK_REJECTED');
-    finite([p.longitude,p.latitude,p.distance,p.longitudeSpeed,p.latitudeSpeed,p.distanceSpeed]);
-    return {body,longitude:p.longitude,latitude:p.latitude,distance_au:p.distance,longitude_speed:p.longitudeSpeed,latitude_speed:p.latitudeSpeed,distance_speed_au:p.distanceSpeed,return_flag:p.returnFlags};
+    let p;
+    try { p = swe.calc(jd_ut,id,{ephemeris:'swiss'}); }
+    catch(error) {
+      if (!engineError(error,'swe_calc_ut')) globalFailure();
+      return {body,status:'UNAVAILABLE',error:'PLANET_CALCULATION_FAILED',return_flag:null};
+    }
+    if (!p || !Number.isInteger(p.returnFlags) || typeof p.ephemeris !== 'string') globalFailure();
+    const rejected = error => ({body,status:'UNAVAILABLE',error,return_flag:p.returnFlags});
+    if (p.ephemeris !== 'swiss' || p.returnFlags !== FLAGS) return rejected('EPHEMERIS_FALLBACK_REJECTED');
+    if (p.warning) return rejected('PLANET_WARNING_REJECTED');
+    if (![p.longitude,p.latitude,p.distance,p.longitudeSpeed,p.latitudeSpeed,p.distanceSpeed].every(Number.isFinite)) return rejected('INVALID_PLANET_OUTPUT');
+    return {body,status:'VALID',error:null,longitude:p.longitude,latitude:p.latitude,distance_au:p.distance,longitude_speed:p.longitudeSpeed,latitude_speed:p.latitudeSpeed,distance_speed_au:p.distanceSpeed,return_flag:p.returnFlags};
   });
-  const h = swe.houses(jd_ut,latitude,longitude,'P');
-  if (h.substituted || h.returnFlags !== 0 || h.requestedSystem !== 'P' || h.warning) throw new CalculationError('PLACIDUS_UNAVAILABLE');
-  if (h.cusps.length !== 12) throw new CalculationError('INVALID_ENGINE_OUTPUT',503);
-  finite([...h.cusps,h.ascendant,h.midheaven]);
+  let h;
+  try { h = swe.houses(jd_ut,latitude,longitude,'P'); }
+  catch(error) { if (!engineError(error,'swe_houses_ex2')) globalFailure(); }
+  if (h && (!Number.isInteger(h.returnFlags) || h.requestedSystem !== 'P')) globalFailure();
+  const validHouses = h && h.returnFlags === 0 && !h.substituted && !h.warning && Array.isArray(h.cusps) && h.cusps.length === 12 && [...h.cusps,h.ascendant,h.midheaven].every(Number.isFinite);
+  const houses = validHouses
+    ? {system:'PLACIDUS',status:'VALID',asc:h.ascendant,mc:h.midheaven,cusps:h.cusps,return_flag:h.returnFlags}
+    : {system:null,system_requested:'PLACIDUS',status:'UNAVAILABLE_PLACIDUS',return_flag:h?.returnFlags??null,fallback_detected:h?.substituted??false,asc_status:'UNAVAILABLE',mc_status:'UNAVAILABLE',limitation:'Independent ASC/MC validation after house failure is not implemented.'};
   const deltaT = swe.deltaT(jd_ut,'swiss') * 86400;
   finite([deltaT]);
-  return {jd_ut,delta_t_seconds:deltaT,ephemeris_mode:'SWISS_EPHEMERIS',runtime_version:swe.version,ephemeris_data_version:'@kuntay/swisseph-data@0.2.2',calc_flags:FLAGS,coordinate_system:'GEOCENTRIC_TROPICAL_ECLIPTIC_OF_DATE',positions,houses:{system:'PLACIDUS',asc:h.ascendant,mc:h.midheaven,cusps:h.cusps,return_flag:h.returnFlags}};
+  const validCount = positions.filter(p=>p.status==='VALID').length;
+  const resultStatus = validCount===10 && validHouses ? 'COMPLETE' : validCount>0 || validHouses ? 'PARTIAL' : 'UNAVAILABLE';
+  return {result_status:resultStatus,valid_planet_count:validCount,jd_ut,delta_t_seconds:deltaT,ephemeris_mode:validCount ? 'SWISS_EPHEMERIS' : null,runtime_version:swe.version,ephemeris_data_version:'@kuntay/swisseph-data@0.2.2',calc_flags:FLAGS,coordinate_system:'GEOCENTRIC_TROPICAL_ECLIPTIC_OF_DATE',positions,houses};
 }

@@ -55,13 +55,13 @@ export default {
         catch { throw new CalculationError('INVALID_JSON',400); }
         const validated = validateInput(input);
         const result = await calculate(validated);
-        return reply({service,k08_version:k08Version,api_contract:'K08_ENGINE_ADAPTER_v0.1',runtime_status:'CALCULATED',calculation_performed:true,k08_deployment_gate:'PENDING',...result});
+        return reply({service,k08_version:k08Version,api_contract:'K08_ENGINE_ADAPTER_v0.2',runtime_status:result.result_status==='COMPLETE'?'CALCULATED':result.result_status==='PARTIAL'?'PARTIAL_RESULT':'LOCAL_HOLD',calculation_performed:result.result_status!=='UNAVAILABLE',k08_deployment_gate:'PENDING',...result},result.result_status==='UNAVAILABLE'?422:200);
       } catch (error) {
         const known = error instanceof CalculationError;
         return reply({
         service,
         k08_version: k08Version,
-        runtime_status: "LOCAL_HOLD",
+        runtime_status: known && ['GLOBAL_RUNTIME_FAIL','RUNTIME_VERSION_MISMATCH','INVALID_ENGINE_OUTPUT'].includes(error.code) ? 'GLOBAL_RUNTIME_FAIL' : 'LOCAL_HOLD',
         calculation_performed: false,
         error: known ? error.code : 'RUNTIME_UNAVAILABLE',
         k08_deployment_gate: 'PENDING'
@@ -77,7 +77,7 @@ export default {
       ephemeris: "SWISS_EPHEMERIS",
       calculation_ready: false,
       engine_integrated: true,
-      api_contract: 'K08_ENGINE_ADAPTER_v0.1',
+      api_contract: 'K08_ENGINE_ADAPTER_v0.2',
       k08_deployment_gate: 'PENDING',
       license: "AGPL-3.0-only",
       source_url: sourceUrl

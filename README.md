@@ -7,7 +7,7 @@ Swiss Ephemeris **2.10.03** のWASMと暦データを組み込んだ計算アダ
 ## 現在の範囲
 
 `POST /calculate` で太陽〜冥王星の10天体とPlacidusハウスを計算します。
-これは `K08_ENGINE_ADAPTER_v0.1` という暫定の技術用I/Oです。K08正本との全項目照合、UTC/K02/TZDB入力契約、Custom GPT Action、K19の認証は後続工程です。
+これは `K08_ENGINE_ADAPTER_v0.2` という暫定の技術用I/Oです。UTC/K02/TZDB入力契約、Custom GPT Action、K19の認証は後続工程です。
 `K08_v2.2_PRODUCTION` は引き継いだ仕様識別子であり、全仕様適合・本番承認を表しません。
 
 稼働確認では `engine_integrated: true`、`runtime_status: ENGINE_INTEGRATED` を返します。`calculation_ready: false` はK08としての利用承認待ちを意味します。計算アダプターの試験実行は可能ですが、応答の `k08_deployment_gate` は常に `PENDING` です。
@@ -53,17 +53,21 @@ Content-Type: application/json
 - houses: ASC・MC・12ハウスカスプ（度、配列先頭が第1ハウス）、Cのreturn_flag
 - `k08_deployment_gate: PENDING`
 
-内部でMoshier等に切り替わった場合、return flag不一致、Placidusの代替方式への切替、警告や非有限値は拒否します。失敗時に部分的な天体値・ハウス値を返しません。
-エラーの `calculation_performed: false` は「有効な完全結果を提供しない」の意味です。拒否を検出するための内部計算が一部行われる場合があります。
+内部でMoshier等に切り替わった場合、return flag不一致、警告や非有限値は該当天体だけをUNAVAILABLEにし、その数値を返しません。他の正常な天体はVALIDとして残します。positionsは常に10天体の順序を保ち、失敗項目にはstatus・error・取得できたreturn_flagを記録します。
+Placidus失敗時はhouses.statusをUNAVAILABLE_PLACIDUSとし、代替カスプを返しません。正常な天体は保持します。ASC/MCの独立検証は未実装のため、ハウス失敗時は両方をUNAVAILABLEとして留保します。
+
+正常な項目が一つでもあればHTTP 200、result_status: PARTIAL、runtime_status: PARTIAL_RESULT、calculation_performed: trueで返します。すべて正常ならCOMPLETE/CALCULATEDです。HTTP 200だけで完全な出生図と判断せず、各項目のstatusを確認してください。
+全項目が利用不可なら422、result_status: UNAVAILABLE、calculation_performed: falseです。このfalseは利用可能な結果がないという意味で、拒否検出の内部計算は行われる場合があります。
+return flags欠落、未知の実行例外・WASM trapなどはGLOBAL_RUNTIME_FAILとして全結果を破棄します。版不一致も全体停止です。本番承認はすべての応答でPENDINGのままです。
 
 | 応答 | 状況 |
 | --- | --- |
 | 400 | JSON・入力・座標不正、未知の項目 |
 | 413 / 415 | 本文過大 / Content-Type非対応 |
-| 422 | 対応日付範囲外、Swiss暦以外への切替、Placidus利用不可 |
+| 422 | 対応日付範囲外、全項目が利用不可 |
 | 503 | 初期化失敗、実行版不一致、異常なエンジン出力 |
 
-失敗時は `runtime_status: LOCAL_HOLD` と安定したerrorコードを返します。入力値や内部エラー全文をログ出力・レスポンスへ転載しません。
+入力拒否・実行不可時はLOCAL_HOLD、基盤の信頼性不良はGLOBAL_RUNTIME_FAILと安定したerrorコードを返します。入力値や内部エラー全文をログ出力・レスポンスへ転載しません。
 GET / と GET /health は200、既知パスのOPTIONSは204、非対応メソッドは405、不明パスは404。CORSは公開API用の `*` です。
 
 ## 状態分離とデータ

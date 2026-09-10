@@ -30,9 +30,11 @@ test('Swiss positions match the recorded native reference',async()=>{
   });
  }
 });
-test('polar Placidus fallback is refused without partial results',async()=>{
- const r=await call({...input,latitude:80});assert.equal(r.status,422);
- const b=await r.json();assert.equal(b.error,'PLACIDUS_UNAVAILABLE');assert.equal(b.calculation_performed,false);assert.equal(b.positions,undefined);
+test('polar Placidus fallback preserves all normal planets',async()=>{
+ const r=await call({...input,latitude:80});assert.equal(r.status,200);
+ const b=await r.json();assert.equal(b.houses.status,'UNAVAILABLE_PLACIDUS');assert.equal(b.calculation_performed,true);assert.equal(b.valid_planet_count,10);
+ assert.equal(b.runtime_status,'PARTIAL_RESULT');assert.equal(b.houses.cusps,undefined);assert.equal(b.houses.asc,undefined);
+ const normal=await (await call()).json();assert.deepEqual(b.positions,normal.positions);
 });
 test('date boundaries and invalid coordinates',async()=>{
  for(const jd_ut of [2415020.5,2488069.5-1/86400]) assert.equal((await call({...input,jd_ut})).status,200);
@@ -57,7 +59,8 @@ test('HTTP method and route contracts',async()=>{
 test('real WASM without ephemeris files is rejected',async()=>{
  const missing=await unstable_dev('test/fixtures/missing-data-worker.js',{config:'wrangler.jsonc',local:true,port:0,experimental:{disableExperimentalWarning:true}});
  try {
-  const r=await missing.fetch('/');assert.equal(r.status,422);
-  assert.equal((await r.json()).error,'EPHEMERIS_FALLBACK_REJECTED');
+  const r=await missing.fetch('/');assert.equal(r.status,200);
+  const b=await r.json();assert.equal(b.valid_planet_count,0);assert.equal(b.result_status,'PARTIAL');
+  assert.ok(b.positions.every(p=>p.status==='UNAVAILABLE' && p.longitude===undefined));assert.equal(b.houses.status,'VALID');
  } finally {await missing.stop();}
 });
