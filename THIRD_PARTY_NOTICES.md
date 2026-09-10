@@ -41,3 +41,6 @@ swetest64.exe -bj<JD> -ut -p0123456789 -fPlbRs -g, -head -eswe -edir<ephe-direct
 Each row stores longitude (degrees), latitude (degrees), distance (AU), longitude speed (degrees/day), in Sun-through-Pluto order. Angular/speed tolerance: 1e-6; distance tolerance: 1e-8. These limits accommodate CLI decimal rounding; they are not an independent observational accuracy claim.
 
 House reference values use the same command with `-p0 -fPl -house139.6503,35.6762,P`: 12 cusps, Ascendant and MC, all in degrees. Each is compared with tolerance 1e-6.
+# Additional wrapper modification: planet house positions
+
+The preparation script adds a housePosition wrapper over the existing WASM swe_house_pos export. It reuses instance-owned numeric/error buffers and returns the warning separately. No dependency binary is changed. This additional modification is distributed under the existing project/dependency license terms.

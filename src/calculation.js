@@ -44,7 +44,7 @@ export function calculateWith(swe, input, {skipHouses=false} = {}) {
   if (h && (!Number.isInteger(h.returnFlags) || h.requestedSystem !== 'P')) globalFailure();
   const validHouses = h && h.returnFlags === 0 && !h.substituted && !h.warning && Array.isArray(h.cusps) && h.cusps.length === 12 && [...h.cusps,h.ascendant,h.midheaven].every(Number.isFinite);
   const houses = skipHouses ? {system:null,system_requested:'PLACIDUS',status:'UNAVAILABLE_GEO',asc_status:'UNAVAILABLE',mc_status:'UNAVAILABLE'} : validHouses
-    ? {system:'PLACIDUS',status:'VALID',asc:h.ascendant,mc:h.midheaven,cusps:h.cusps,return_flag:h.returnFlags}
+    ? {system:'PLACIDUS',status:'VALID',armc:h.armc,asc:h.ascendant,mc:h.midheaven,cusps:h.cusps,return_flag:h.returnFlags}
     : {system:null,system_requested:'PLACIDUS',status:'UNAVAILABLE_PLACIDUS',return_flag:h?.returnFlags??null,fallback_detected:h?.substituted??false,asc_status:'UNAVAILABLE',mc_status:'UNAVAILABLE',limitation:'Independent ASC/MC validation after house failure is not implemented.'};
   const deltaT = swe.deltaT(jd_ut,'swiss') * 86400;
   finite([deltaT]);

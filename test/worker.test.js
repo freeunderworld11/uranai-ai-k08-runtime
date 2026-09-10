@@ -10,6 +10,12 @@ after(async()=>{await worker?.stop();});
 const input={jd_ut:2451545,latitude:35.6762,longitude:139.6503};
 const call=(body=input)=>worker.fetch('/calculate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
 const callK02=body=>worker.fetch('/calculate/k02',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+const planetCore=positions=>positions.map(p=>Object.fromEntries(Object.entries(p).filter(([k])=>!k.startsWith('house'))));
+test('planet houses match native swetest at J2000 Tokyo',async()=>{
+ const b=await (await call()).json();
+ const expected=[5.1460597,3.4592438,4.8796420,3.9938010,6.7209662,8.8702119,9.3548770,6.2600946,5.8755633,4.3451555];
+ b.positions.forEach((p,i)=>{assert.equal(p.house,Math.floor(expected[i]));assert.ok(Math.abs(p.house_position-expected[i])<1e-6);});
+});
 test('solar 0-degree crossing agrees with native Swiss Ephemeris reference bracket',async()=>{
  // Official swetest64 2.10.03, -b20.3.2000 -ut07:35:14 / :15 -p0 -fPls -eswe:
  // 359.9999925 / 0.0000040 degrees, using the same sepl_18.se1 data.
@@ -45,7 +51,7 @@ test('K02 UTC conversion matches JD and supports planets without geography',asyn
  assert.equal(b.positions[0].sign,'CAPRICORN');assert.equal(b.positions[0].motion,'DIRECT');assert.equal(b.positions[0].station_sensitive,null);
  assert.equal(b.aspects.pair_count,45);assert.equal(b.aspects.available_pair_count,45);assert.equal(b.aspects.scope,'SINGLE_INSTANT');
  const noGeo={...k02,LATITUDE:null,LONGITUDE:null,GEO_PRECISION:'UNAVAILABLE',GEO_STATUS:'UNAVAILABLE'};
- const partial=await (await callK02(noGeo)).json();assert.equal(partial.houses.status,'UNAVAILABLE_GEO');assert.deepEqual(partial.positions,b.positions);
+ const partial=await (await callK02(noGeo)).json();assert.equal(partial.houses.status,'UNAVAILABLE_GEO');assert.deepEqual(planetCore(partial.positions),planetCore(b.positions));
  assert.deepEqual(partial.aspects,b.aspects);
  assert.equal(partial.result_status,'PARTIAL');
  const blocked=await callK02({...k02,LOCAL_TIME_STATUS:'AMBIGUOUS'});assert.equal(blocked.status,422);const hold=await blocked.json();assert.equal(hold.positions,undefined);assert.equal(hold.calculation_performed,false);
@@ -76,7 +82,7 @@ test('polar Placidus fallback preserves all normal planets',async()=>{
  const r=await call({...input,latitude:80});assert.equal(r.status,200);
  const b=await r.json();assert.equal(b.houses.status,'UNAVAILABLE_PLACIDUS');assert.equal(b.calculation_performed,true);assert.equal(b.valid_planet_count,10);
  assert.equal(b.runtime_status,'PARTIAL_RESULT');assert.equal(b.houses.cusps,undefined);assert.equal(b.houses.asc,undefined);
- const normal=await (await call()).json();assert.deepEqual(b.positions,normal.positions);
+ const normal=await (await call()).json();assert.deepEqual(planetCore(b.positions),planetCore(normal.positions));
 });
 test('date boundaries and invalid coordinates',async()=>{
  for(const jd_ut of [2415020.5,2488069.5-1/86400]) assert.equal((await call({...input,jd_ut})).status,200);

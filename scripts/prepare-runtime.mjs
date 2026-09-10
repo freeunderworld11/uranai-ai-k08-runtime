@@ -36,6 +36,14 @@ writeFileSync(new URL('wasm/swisseph.mjs',out),'import compiledWasm from "./swis
 // Expose the actual C return values so the adapter can reject fallback.
 let api = replaceOnce(instance,'warning: message,\n            };\n        },\n        /** `calc()`','warning: message, returnFlags: ret,\n            };\n        },\n        /** `calc()`');
 api = replaceOnce(api,'requestedSystem: system,','returnFlags: ret, requestedSystem: system,');
+api = replaceOnce(api,'        houses(jd, latitude, longitude, system = HouseSystem.Placidus, options = {}) {',`        housePosition(armc, latitude, eps, longitude, eclipticLatitude) {
+            assertLive();
+            writeDoubles(bufPosition, [longitude, eclipticLatitude]);
+            wasm.setValue(bufError, 0, 'i8');
+            const position = wasm.cwrap('swe_house_pos', 'number', ['number','number','number','number','number','number'])(armc, latitude, eps, 80, bufPosition, bufError);
+            return {position, warning:readError()};
+        },
+        houses(jd, latitude, longitude, system = HouseSystem.Placidus, options = {}) {`);
 writeFileSync(new URL('dist/instance.js',out),api);
 for(const [label, dir] of [['core',core],['data',data]]) {
  for(const name of ['LICENSE','NOTICE']) cpSync(new URL(name,dir),new URL(`${label}-${name}`,out));

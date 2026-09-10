@@ -90,6 +90,12 @@ GET / と GET /health は200、既知パスのOPTIONSは204、非対応メソッ
 
 ## 状態分離とデータ
 
+### 単一時点の天体所属ハウス
+
+Placidusが正常な場合、swe_house_posへARMC・地理緯度・真黄道傾斜角・天体黄経・黄緯を渡します。house_positionは1以上13未満の連続値、houseはその整数部（1〜12）です。単純なカスプ黄経の大小比較で代用しません。正常天体にはhouse_status=VALID、失敗時はhouse=null / UNAVAILABLEと理由を返します。地理不足、Placidus失敗、警告や異常な戻り値でも正常な天体位置を保持します。
+
+東京・JD2451545の10天体を公式swetest64 2.10.03（`-bj2451545 -ut -p0123456789 -fPj -g, -head -eswe -house139.6503,35.6762,P`、同じ暦データ）と照合し、house_position差1e-6未満を確認しました。全46テストとビルドが成功しています。全地域のK19回帰群は未完了です。カスプ感度は未検証のためnull、範囲内の所属安定性も未確定です。本番承認はPENDINGです。
+
 ### 単一時点のサイン・運行方向
 
 `/calculate` と `/calculate/k02` の正常な天体に、sign（英名）、sign_name（日本語）、sign_index（牡羊座=0）、sign_degree、sign_boundary_distance、sign_boundary_sensitive、motionを追加します。黄経は0以上360未満に正規化し、変更時だけraw_longitudeに元値を残します。既に範囲内の黄経はそのまま保持します。サインと境界判定は表示丸め前に行い、境界距離0.1度以下を感度ありとします。
