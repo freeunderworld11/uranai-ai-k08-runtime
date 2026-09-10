@@ -1,0 +1,372 @@
+{
+  "case_id": "CASE_H",
+  "input": {
+    "NORMALIZED_BIRTH_DATE": "2000-03-01",
+    "NORMALIZED_BIRTH_TIME": "21:00:00",
+    "TIME_PRECISION": "SECOND",
+    "LOCAL_CIVIL_DATETIME": "2000-03-01T21:00:00",
+    "PLACE_NORMALIZED": "Tokyo reference coordinate",
+    "LATITUDE": 35.6762,
+    "LONGITUDE": 139.6503,
+    "GEO_PRECISION": "EXACT",
+    "GEO_STATUS": "CONFIRMED",
+    "TIMEZONE_ID": "Asia/Tokyo",
+    "TIMEZONE_STATUS": "CONFIRMED",
+    "TZDB_VERSION": "2026c",
+    "PRE_1970_CONFIDENCE": null,
+    "DST_STATUS": "STANDARD",
+    "LOCAL_TIME_STATUS": "NORMAL",
+    "UTC_OFFSET_EFFECTIVE": "+09:00",
+    "UTC_DATETIME": "2000-03-01T12:00:00Z",
+    "K02_AUDIT_STATUS": "PASS",
+    "K02_VERSION": "K02_v2.4_PRODUCTION"
+  },
+  "reference": {
+    "engine": "Swiss Ephemeris native swetest64",
+    "version": "2.10.03",
+    "executable_sha256": "C44D29554927AD1BA44196B5B274904F012DACAA3B4797F7F4AE6A48618FC1C5",
+    "data": "@kuntay/swisseph-data@0.2.2",
+    "raw": "case-h-native.txt",
+    "independence": "Separate native executable; same Swiss Ephemeris engine family and data. Not independent astronomical model certification."
+  },
+  "tolerance": {
+    "longitude_degrees": 0.01,
+    "angle_degrees": 0.05,
+    "cusp_degrees": 0.05,
+    "speed_degrees_per_day": 1e-06
+  },
+  "expected": {
+    "jd_ut": 2451605.0,
+    "planets": {
+      "SUN": {
+        "longitude": 341.2097391,
+        "longitude_speed": 1.0036858
+      },
+      "MOON": {
+        "longitude": 287.3946145,
+        "longitude_speed": 11.9087669
+      },
+      "MERCURY": {
+        "longitude": 341.4803902,
+        "longitude_speed": -1.0413769
+      },
+      "VENUS": {
+        "longitude": 315.1921418,
+        "longitude_speed": 1.2356189
+      },
+      "MARS": {
+        "longitude": 13.9731128,
+        "longitude_speed": 0.7512241
+      },
+      "JUPITER": {
+        "longitude": 32.7670959,
+        "longitude_speed": 0.190778
+      },
+      "SATURN": {
+        "longitude": 42.4479603,
+        "longitude_speed": 0.0828443
+      },
+      "URANUS": {
+        "longitude": 318.1777615,
+        "longitude_speed": 0.0546676
+      },
+      "NEPTUNE": {
+        "longitude": 305.3826455,
+        "longitude_speed": 0.0322588
+      },
+      "PLUTO": {
+        "longitude": 252.8462654,
+        "longitude_speed": 0.0080411
+      }
+    },
+    "asc": 204.2197474,
+    "mc": 117.1914125,
+    "cusps": [
+      204.2197474,
+      232.4519902,
+      263.7976734,
+      297.1914125,
+      329.9516358,
+      359.3196454,
+      24.2197474,
+      52.4519902,
+      83.7976734,
+      117.1914125,
+      149.9516358,
+      179.3196454
+    ],
+    "aspects": [
+      {
+        "body_a": "SUN",
+        "body_b": "MOON",
+        "status": "NOT_FORMED",
+        "aspect": null
+      },
+      {
+        "body_a": "SUN",
+        "body_b": "MERCURY",
+        "status": "FORMED",
+        "aspect": "CONJUNCTION"
+      },
+      {
+        "body_a": "SUN",
+        "body_b": "VENUS",
+        "status": "NOT_FORMED",
+        "aspect": null
+      },
+      {
+        "body_a": "SUN",
+        "body_b": "MARS",
+        "status": "NOT_FORMED",
+        "aspect": null
+      },
+      {
+        "body_a": "SUN",
+        "body_b": "JUPITER",
+        "status": "NOT_FORMED",
+        "aspect": null
+      },
+      {
+        "body_a": "SUN",
+        "body_b": "SATURN",
+        "status": "FORMED",
+        "aspect": "SEXTILE"
+      },
+      {
+        "body_a": "SUN",
+        "body_b": "URANUS",
+        "status": "NOT_FORMED",
+        "aspect": null
+      },
+      {
+        "body_a": "SUN",
+        "body_b": "NEPTUNE",
+        "status": "NOT_FORMED",
+        "aspect": null
+      },
+      {
+        "body_a": "SUN",
+        "body_b": "PLUTO",
+        "status": "FORMED",
+        "aspect": "SQUARE"
+      },
+      {
+        "body_a": "MOON",
+        "body_b": "MERCURY",
+        "status": "NOT_FORMED",
+        "aspect": null
+      },
+      {
+        "body_a": "MOON",
+        "body_b": "VENUS",
+        "status": "NOT_FORMED",
+        "aspect": null
+      },
+      {
+        "body_a": "MOON",
+        "body_b": "MARS",
+        "status": "FORMED",
+        "aspect": "SQUARE"
+      },
+      {
+        "body_a": "MOON",
+        "body_b": "JUPITER",
+        "status": "NOT_FORMED",
+        "aspect": null
+      },
+      {
+        "body_a": "MOON",
+        "body_b": "SATURN",
+        "status": "FORMED",
+        "aspect": "TRINE"
+      },
+      {
+        "body_a": "MOON",
+        "body_b": "URANUS",
+        "status": "NOT_FORMED",
+        "aspect": null
+      },
+      {
+        "body_a": "MOON",
+        "body_b": "NEPTUNE",
+        "status": "NOT_FORMED",
+        "aspect": null
+      },
+      {
+        "body_a": "MOON",
+        "body_b": "PLUTO",
+        "status": "NOT_FORMED",
+        "aspect": null
+      },
+      {
+        "body_a": "MERCURY",
+        "body_b": "VENUS",
+        "status": "NOT_FORMED",
+        "aspect": null
+      },
+      {
+        "body_a": "MERCURY",
+        "body_b": "MARS",
+        "status": "NOT_FORMED",
+        "aspect": null
+      },
+      {
+        "body_a": "MERCURY",
+        "body_b": "JUPITER",
+        "status": "NOT_FORMED",
+        "aspect": null
+      },
+      {
+        "body_a": "MERCURY",
+        "body_b": "SATURN",
+        "status": "FORMED",
+        "aspect": "SEXTILE"
+      },
+      {
+        "body_a": "MERCURY",
+        "body_b": "URANUS",
+        "status": "NOT_FORMED",
+        "aspect": null
+      },
+      {
+        "body_a": "MERCURY",
+        "body_b": "NEPTUNE",
+        "status": "NOT_FORMED",
+        "aspect": null
+      },
+      {
+        "body_a": "MERCURY",
+        "body_b": "PLUTO",
+        "status": "FORMED",
+        "aspect": "SQUARE"
+      },
+      {
+        "body_a": "VENUS",
+        "body_b": "MARS",
+        "status": "FORMED",
+        "aspect": "SEXTILE"
+      },
+      {
+        "body_a": "VENUS",
+        "body_b": "JUPITER",
+        "status": "NOT_FORMED",
+        "aspect": null
+      },
+      {
+        "body_a": "VENUS",
+        "body_b": "SATURN",
+        "status": "FORMED",
+        "aspect": "SQUARE"
+      },
+      {
+        "body_a": "VENUS",
+        "body_b": "URANUS",
+        "status": "FORMED",
+        "aspect": "CONJUNCTION"
+      },
+      {
+        "body_a": "VENUS",
+        "body_b": "NEPTUNE",
+        "status": "NOT_FORMED",
+        "aspect": null
+      },
+      {
+        "body_a": "VENUS",
+        "body_b": "PLUTO",
+        "status": "FORMED",
+        "aspect": "SEXTILE"
+      },
+      {
+        "body_a": "MARS",
+        "body_b": "JUPITER",
+        "status": "NOT_FORMED",
+        "aspect": null
+      },
+      {
+        "body_a": "MARS",
+        "body_b": "SATURN",
+        "status": "NOT_FORMED",
+        "aspect": null
+      },
+      {
+        "body_a": "MARS",
+        "body_b": "URANUS",
+        "status": "FORMED",
+        "aspect": "SEXTILE"
+      },
+      {
+        "body_a": "MARS",
+        "body_b": "NEPTUNE",
+        "status": "NOT_FORMED",
+        "aspect": null
+      },
+      {
+        "body_a": "MARS",
+        "body_b": "PLUTO",
+        "status": "FORMED",
+        "aspect": "TRINE"
+      },
+      {
+        "body_a": "JUPITER",
+        "body_b": "SATURN",
+        "status": "NOT_FORMED",
+        "aspect": null
+      },
+      {
+        "body_a": "JUPITER",
+        "body_b": "URANUS",
+        "status": "NOT_FORMED",
+        "aspect": null
+      },
+      {
+        "body_a": "JUPITER",
+        "body_b": "NEPTUNE",
+        "status": "FORMED",
+        "aspect": "SQUARE"
+      },
+      {
+        "body_a": "JUPITER",
+        "body_b": "PLUTO",
+        "status": "NOT_FORMED",
+        "aspect": null
+      },
+      {
+        "body_a": "SATURN",
+        "body_b": "URANUS",
+        "status": "FORMED",
+        "aspect": "SQUARE"
+      },
+      {
+        "body_a": "SATURN",
+        "body_b": "NEPTUNE",
+        "status": "NOT_FORMED",
+        "aspect": null
+      },
+      {
+        "body_a": "SATURN",
+        "body_b": "PLUTO",
+        "status": "NOT_FORMED",
+        "aspect": null
+      },
+      {
+        "body_a": "URANUS",
+        "body_b": "NEPTUNE",
+        "status": "NOT_FORMED",
+        "aspect": null
+      },
+      {
+        "body_a": "URANUS",
+        "body_b": "PLUTO",
+        "status": "NOT_FORMED",
+        "aspect": null
+      },
+      {
+        "body_a": "NEPTUNE",
+        "body_b": "PLUTO",
+        "status": "NOT_FORMED",
+        "aspect": null
+      }
+    ],
+    "mercury_motion": "RETROGRADE"
+  }
+}

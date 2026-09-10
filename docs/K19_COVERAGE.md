@@ -11,7 +11,7 @@
 | E 歴史的offset変更 | パリ1911年の変更前後2入力・全参照値、誤ったoffsetと信頼性不足の拒否を検証 | 歴史的出典認証・本番受入。時刻は条件付き |
 | F 太陽サイン境界 | 春分境界前後の2入力・全参照値、PISCES/ARIES切替と感度を固定検証 | 本番環境受入・最終承認 |
 | G 月サイン境界 | 月の240度境界前後2入力・全参照値、SCORPIO/SAGITTARIUS切替を固定検証 | 本番受入・最終承認。時刻不明時の安定性認証は別 |
-| H 水星逆行付近 | 速度符号から順行・逆行を判定するテスト | 実際の水星逆行付近の固定入力・全expected値 |
+| H 水星逆行付近 | 2000-03-01の逆行期間内入力・全参照値、水星負速度とRETROGRADEを検証 | 本番受入・最終承認。stationはCASE_I |
 | I station付近 | ZERO_SPEEDを区別、感度は未認証 | 実際のstation近傍・数値精度根拠・全expected値 |
 | J 高緯度Placidus失敗 | Tromso J2000、正常天体保持・P/E角度条件付き照合 | failureを含む完全な固定expected契約 |
 | K 0度牡羊近辺 | 春分黄経、0/360度の境界検査 | Fとは目的を区別した固定expected契約 |
@@ -36,4 +36,4 @@
 
 未承認ゲートはfalse、未評価はnull、総合はFAIL、K09_USAGE_STATUSはLOCAL_BLOCKを維持します。他占術の継続制御はこのRuntime外のため、今回実装済みとは扱いません。
 
-CASE_Aの入力・native参照値・取得条件・許容差・ローカル実行結果を固定しました。詳細はCASE_A.mdを参照。CASE_Bも固定参照値でローカル照合済みです（CASE_B.md）。CASE_Cも固定参照値でローカル照合済みです（CASE_C.md）。CASE_Dも固定参照値でローカル照合済みです（CASE_D.md）。CASE_Eは変更前後の条件付き回帰照合済みです（CASE_E.md）。CASE_Fは境界両側の固定参照値で照合済みです（CASE_F.md）。CASE_Gは月境界両側を固定参照値で照合済みです（CASE_G.md）。次工程はCASE_H（水星逆行付近）です。
+CASE_Aの入力・native参照値・取得条件・許容差・ローカル実行結果を固定しました。詳細はCASE_A.mdを参照。CASE_Bも固定参照値でローカル照合済みです（CASE_B.md）。CASE_Cも固定参照値でローカル照合済みです（CASE_C.md）。CASE_Dも固定参照値でローカル照合済みです（CASE_D.md）。CASE_Eは変更前後の条件付き回帰照合済みです（CASE_E.md）。CASE_Fは境界両側の固定参照値で照合済みです（CASE_F.md）。CASE_Gは月境界両側を固定参照値で照合済みです（CASE_G.md）。CASE_Hは逆行期間内の固定参照値で照合済みです（CASE_H.md）。次工程はCASE_I（station付近）です。

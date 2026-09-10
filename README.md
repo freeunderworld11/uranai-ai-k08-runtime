@@ -277,3 +277,8 @@ POST /calculate/solar-boundary はK08_SOLAR_LONGITUDE_BOUNDARY_SERVICE_v1の開�
 
 [月サイン境界の条件](docs/CASE_G.md)と前後2入力を追加しました。蠍座から射手座への切替、境界感度、全出生図参照値を照合し、全83テストが成功しました。本番承認は保留です。
 
+
+## CASE_H固定回帰テスト
+
+[水星逆行ケースの条件](docs/CASE_H.md)と固定参照値を追加しました。負の水星速度とRETROGRADE、全出生図参照値を照合し、全84テストが成功しました。station感度は未認証、本番承認は保留です。
+
