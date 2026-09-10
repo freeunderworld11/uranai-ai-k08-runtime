@@ -11,7 +11,7 @@ const input={jd_ut:2451545,latitude:35.6762,longitude:139.6503};
 const call=(body=input)=>worker.fetch('/calculate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
 const callK02=body=>worker.fetch('/calculate/k02',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
 const planetCore=positions=>positions.map(p=>Object.fromEntries(Object.entries(p).filter(([k])=>!k.startsWith('house'))));
-for(const caseName of ['case-a','case-b','case-c'])test(`K19 ${caseName} fixed K02 input matches native planets, angles, cusps and all aspect states`,async()=>{
+for(const caseName of ['case-a','case-b','case-c','case-d'])test(`K19 ${caseName} fixed K02 input matches native planets, angles, cusps and all aspect states`,async()=>{
  const f=JSON.parse(readFileSync(new URL(`./fixtures/${caseName}.json`,import.meta.url),'utf8'));
  const response=await callK02(f.input);assert.equal(response.status,200);
  const b=await response.json(),e=f.expected,t=f.tolerance;
