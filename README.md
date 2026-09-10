@@ -2,26 +2,19 @@
 
 Cloudflare Workers runtime for K08 Swiss Ephemeris integration
 
-## 現在の段階
+Swiss Ephemeris **2.10.03** のWASMと暦データを組み込んだ計算アダプターです。ローカルworkerdで検証済み。本番未公開・K08 Deployment Gate未承認です。
 
-K08 RuntimeのAPI入口のみを実装しています。Swiss Ephemeris本体・WASM・天文暦データは未導入です。
-`K08_v2.2_PRODUCTION` は引き継いだ仕様識別子であり、計算の実装完了を意味しません。
-`ephemeris: "SWISS_EPHEMERIS"` は予定するエンジン名です。現段階では天文値を生成しません。
+## 現在の範囲
 
-| リクエスト | 応答 |
-| --- | --- |
-| `GET /`、`GET /health` | 200、`SHELL_ACTIVE`、`calculation_ready: false` |
-| `POST /calculate` | 503、`RUNTIME_NOT_READY`、`calculation_performed: false` |
-| 上記パスへの `OPTIONS` | 204、本文なし、CORSヘッダー |
-| 上記パスで非対応のメソッド | 405、`Allow` ヘッダー |
-| 不明なパス | 404、`NOT_FOUND` |
+`POST /calculate` で太陽〜冥王星の10天体とPlacidusハウスを計算します。
+これは `K08_ENGINE_ADAPTER_v0.1` という暫定の技術用I/Oです。K08正本との全項目照合、UTC/K02/TZDB入力契約、Custom GPT Action、K19の認証は後続工程です。
+`K08_v2.2_PRODUCTION` は引き継いだ仕様識別子であり、全仕様適合・本番承認を表しません。
 
-計算入力はまだ解析・検証しません。不正JSONを含め、計算要求は常に未準備として返します。
-CORSは公開API入口として `*` を使用し、認証・入力保存・外部通信は行いません。
+稼働確認では `engine_integrated: true`、`runtime_status: ENGINE_INTEGRATED` を返します。`calculation_ready: false` はK08としての利用承認待ちを意味します。計算アダプターの試験実行は可能ですが、応答の `k08_deployment_gate` は常に `PENDING` です。
 
-## 開発・検証
+## 起動と検証
 
-Node.js 22以上とnpmを使用します。
+Node.js 22以上、npmを使用します。
 
 ```sh
 npm ci
@@ -30,33 +23,61 @@ npm run build
 npm run dev
 ```
 
-`npm test` はNode.jsのWeb APIで応答契約を検証します。
-`npm run build` はWranglerでバンドルするdry runで、公開はしません。
-ローカル起動後は `http://localhost:8787/health` で確認できます。
+`npm test` は実際のローカルworkerdでWASM、ネイティブ参照値、入力拒否、Placidus失敗、データ欠落、同時リクエストを検証します。
+`npm run build` は公開しないdry runです。Wranglerはビルド・起動時に `scripts/prepare-runtime.mjs` を実行し、固定した依存から `.generated/` を生成します。
+この処理は元のnode_modulesを変更せず、版・SHA-256・パッチ対象の一致を確認します。想定と異なる依存はビルド時に拒否します。生成物はGitへ登録しません。
 
-## Cloudflareへの反映
+## 計算API
 
-対象アカウント・既存Worker・GitHub連携の設定を確認した次の段階で実施します。
-手動で反映する場合は、認証済み環境で `npm run deploy` を実行します。
-Worker名は `uranai-ai-k08-runtime` です。同名Workerへのデプロイは既存コードを更新します。
-このリポジトリには自動デプロイ用のGitHub Actionsを含めていません。
+```http
+POST /calculate
+Content-Type: application/json
 
-## Swiss Ephemerisの採用判定（未完了）
+{"jd_ut":2451545,"latitude":35.6762,"longitude":139.6503}
+```
 
-Cloudflare WorkersはWASMに対応していますが、それだけで個々のSwiss Ephemerisラッパーの互換性は保証されません。
-次の段階で候補を固定し、静的WASMインポート、初期化、仮想ファイルシステムと暦データ、CPU・メモリ制限、基準値との一致、配布条件を検証します。
-互換性と精度の確認が完了するまで `calculation_ready` はfalseを維持します。
+| 入力 | 意味・制約 |
+| --- | --- |
+| jd_ut | UTのユリウス日（TTではない）。2415020.5以上、2488069.5未満。1900-01-01〜2099-12-31の範囲 |
+| latitude | 北緯を正とする数値、-90〜90 |
+| longitude | 東経を正とする数値、-180〜180 |
 
-既存WASMラッパーが適合しない場合はWorkers向けの専用WASMビルドを検討します。
-それも困難なら、Swiss Ephemerisを別のサーバー／コンテナで動かし、Workerから呼び出す構成を代替案とします。
-異なる天文エンジンへの無断の置換は行いません。
+3項目すべて必須。数値文字列・未知の項目を拒否します。JSON本文は4096 bytesまで。日時文字列・タイムゾーン・夏時間変換は未実装です。UTCをUTへどう扱うかを含め、正式な時刻契約を後続工程で確定します。
 
-- [Cloudflare WASM公式ドキュメント](https://developers.cloudflare.com/workers/runtime-apis/webassembly/)
-- [Swiss Ephemeris公式サイト](https://www.astro.com/swisseph/)
+計算条件は地心・トロピカル・日付の黄道座標、`SEFLG_SWIEPH | SEFLG_SPEED = 258`、Placidus固定。変更用のflags入力は受け付けません。
+成功時は200で以下を返します。
 
-## ライセンス
+- `calculation_performed: true`、`runtime_status: CALCULATED`
+- 実際のruntime_version、ephemeris_mode、ephemeris_data_version、calc_flags、delta_t_seconds
+- positions: 10天体の黄経・黄緯（度）、距離（AU）、各速度（度/日またはAU/日）、Cが返したreturn_flag
+- houses: ASC・MC・12ハウスカスプ（度、配列先頭が第1ハウス）、Cのreturn_flag
+- `k08_deployment_gate: PENDING`
 
-このリポジトリのコードは **GNU AGPL v3のみ（AGPL-3.0-only）** で提供します。全文は [LICENSE](LICENSE) を参照してください。
-ライセンス本文はSPDXのAGPL-3.0-onlyテキストから取得しています。
-APIの稼働確認応答に公開ソースURLを含めています。派生版を公開する場合は実際の対応ソースのURLに更新してください。
-将来追加するSwiss Ephemeris本体・ラッパー・暦データについては、それぞれのライセンスと必要な通知を採用時に確認します。
+内部でMoshier等に切り替わった場合、return flag不一致、Placidusの代替方式への切替、警告や非有限値は拒否します。失敗時に部分的な天体値・ハウス値を返しません。
+エラーの `calculation_performed: false` は「有効な完全結果を提供しない」の意味です。拒否を検出するための内部計算が一部行われる場合があります。
+
+| 応答 | 状況 |
+| --- | --- |
+| 400 | JSON・入力・座標不正、未知の項目 |
+| 413 / 415 | 本文過大 / Content-Type非対応 |
+| 422 | 対応日付範囲外、Swiss暦以外への切替、Placidus利用不可 |
+| 503 | 初期化失敗、実行版不一致、異常なエンジン出力 |
+
+失敗時は `runtime_status: LOCAL_HOLD` と安定したerrorコードを返します。入力値や内部エラー全文をログ出力・レスポンスへ転載しません。
+GET / と GET /health は200、既知パスのOPTIONSは204、非対応メソッドは405、不明パスは404。CORSは公開API用の `*` です。
+
+## 状態分離とデータ
+
+1リクエストごとにWASMインスタンスを生成し、暦ファイルを配置して計算し、finallyでdisposeします。天体設定や入力を別リクエストと共有しません。
+3ファイルはビルドに同梱され、計算時の外部通信はありません。対応範囲はデータ全体より狭く制限しています。
+CPU・メモリ・高負荷時の実環境測定は未実施です。ローカルの成功からFreeプランでの本番運用可否を断定しません。
+
+## 公開前の残作業
+
+K08正本の要件照合と正式I/O、時刻変換・監査情報、実環境のCPU/メモリ・回帰試験、ライセンスと対応ソース公開の最終確認が必要です。
+次の公開工程で対象アカウントとWorkerを確認してから `npm run deploy` を使います。同名の既存Workerを更新するため、現段階では実行していません。自動デプロイ用Actionsは含みません。
+
+## ライセンス・証跡
+
+プロジェクトは [AGPL-3.0-only](LICENSE)。依存の権利表示・改変箇所は [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)、初期互換性検証は [docs/WASM_COMPATIBILITY.md](docs/WASM_COMPATIBILITY.md) を参照してください。
+稼働確認応答のsource_urlはこのリポジトリです。派生版は実際の対応ソースのURLへ更新してください。

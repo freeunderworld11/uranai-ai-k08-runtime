@@ -4,5 +4,7 @@
   "main": "src/worker.js",
   "compatibility_date": "2026-09-10",
   "compatibility_flags": ["nodejs_compat"],
-  "observability": { "enabled": true, "head_sampling_rate": 1 }
+  "observability": { "enabled": true, "head_sampling_rate": 1 },
+  "build": { "command": "node scripts/prepare-runtime.mjs" },
+  "rules": [{ "type": "Data", "globs": ["**/*.se1"], "fallthrough": true }]
 }

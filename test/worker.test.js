@@ -1,45 +1,63 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import test from "node:test";
-import assert from "node:assert/strict";
-import worker from "../src/worker.js";
-
-const call = (path, options) => worker.fetch(new Request(`https://example.test${path}`, options));
-test("health identifies the shell without claiming calculation readiness", async () => {
-  for (const path of ["/", "/health", "/health?probe=1"]) {
-    const response = await call(path);
-    assert.equal(response.status, 200);
-    const body = await response.json();
-    assert.equal(body.calculation_ready, false);
-    assert.equal(body.runtime_status, "SHELL_ACTIVE");
-    assert.equal(body.k08_version, "K08_v2.2_PRODUCTION");
-    assert.equal(response.headers.get("Cache-Control"), "no-store");
-  }
+import {before,after,test} from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {unstable_dev} from 'wrangler';
+let worker;
+before(async()=>{worker=await unstable_dev('src/worker.js',{config:'wrangler.jsonc',local:true,port:0,experimental:{disableExperimentalWarning:true}});});
+after(async()=>{await worker?.stop();});
+const input={jd_ut:2451545,latitude:35.6762,longitude:139.6503};
+const call=(body=input)=>worker.fetch('/calculate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+test('health does not claim K08 deployment approval',async()=>{
+ const r=await worker.fetch('/health'); assert.equal(r.status,200);
+ const b=await r.json();assert.equal(b.engine_integrated,true);assert.equal(b.calculation_ready,false);assert.equal(b.k08_deployment_gate,'PENDING');
 });
-test("calculation always fails closed, including malformed input", async () => {
-  for (const body of [undefined, "{}", "not json"]) {
-    const response = await call("/calculate", { method: "POST", body });
-    assert.equal(response.status, 503);
-    const data = await response.json();
-    assert.equal(data.calculation_performed, false);
-    assert.equal(data.runtime_status, "RUNTIME_NOT_READY");
-    assert.equal(response.headers.get("Access-Control-Allow-Origin"), "*");
-  }
+test('Swiss positions match the recorded native reference',async()=>{
+ const references=JSON.parse(readFileSync(new URL('./fixtures/native.json',import.meta.url)));
+ for(const reference of references){
+  const r=await call({...input,jd_ut:reference.jd});assert.equal(r.status,200);
+  const b=await r.json();assert.equal(b.runtime_version,'2.10.03');assert.equal(b.calculation_performed,true);
+  assert.equal(b.positions.length,10);assert.equal(b.houses.cusps.length,12);assert.equal(b.houses.return_flag,0);
+  b.houses.cusps.forEach((cusp,i)=>assert.ok(Math.abs(cusp-reference.houses.cusps[i])<1e-6));
+  assert.ok(Math.abs(b.houses.asc-reference.houses.asc)<1e-6);
+  assert.ok(Math.abs(b.houses.mc-reference.houses.mc)<1e-6);
+  b.positions.forEach((p,i)=>{
+   assert.equal(p.return_flag,258);
+   assert.ok(Math.abs(p.longitude-reference.positions[i][0])<1e-6);
+   assert.ok(Math.abs(p.latitude-reference.positions[i][1])<1e-6);
+   assert.ok(Math.abs(p.distance_au-reference.positions[i][2])<1e-8);
+   assert.ok(Math.abs(p.longitude_speed-reference.positions[i][3])<1e-6);
+  });
+ }
 });
-test("preflight has an empty body", async () => {
-  const response = await call("/calculate", { method: "OPTIONS" });
-  assert.equal(response.status, 204);
-  assert.equal(await response.text(), "");
-  assert.equal(response.headers.get("Access-Control-Allow-Headers"), "Content-Type");
+test('polar Placidus fallback is refused without partial results',async()=>{
+ const r=await call({...input,latitude:80});assert.equal(r.status,422);
+ const b=await r.json();assert.equal(b.error,'PLACIDUS_UNAVAILABLE');assert.equal(b.calculation_performed,false);assert.equal(b.positions,undefined);
 });
-test("known routes reject incorrect methods with Allow", async () => {
-  for (const [path, method, allow] of [["/health", "POST", "GET, OPTIONS"], ["/calculate", "GET", "POST, OPTIONS"]]) {
-    const response = await call(path, { method });
-    assert.equal(response.status, 405);
-    assert.equal(response.headers.get("Allow"), allow);
-  }
+test('date boundaries and invalid coordinates',async()=>{
+ for(const jd_ut of [2415020.5,2488069.5-1/86400]) assert.equal((await call({...input,jd_ut})).status,200);
+ for(const jd_ut of [2415020.5-1/86400,2488069.5]) assert.equal((await call({...input,jd_ut})).status,422);
+ for(const value of [{...input,latitude:91},{...input,longitude:-181},{...input,jd_ut:'2451545'},{...input,flags:4},null]) assert.equal((await call(value)).status,400);
 });
-test("unknown paths return 404", async () => {
-  const response = await call("/missing");
-  assert.equal(response.status, 404);
-  assert.deepEqual(await response.json(), { error: "NOT_FOUND" });
+test('malformed JSON, content type, large bodies',async()=>{
+ assert.equal((await worker.fetch('/calculate',{method:'POST',headers:{'Content-Type':'application/json'},body:'{'})).status,400);
+ assert.equal((await worker.fetch('/calculate',{method:'POST',body:'{}'})).status,415);
+ assert.equal((await worker.fetch('/calculate',{method:'POST',headers:{'Content-Type':'application/json'},body:' '.repeat(5000)})).status,413);
+});
+test('concurrent requests stay independent',async()=>{
+ const inputs=[input,{...input,longitude:-74,latitude:40.7,jd_ut:2461293.5},input];
+ const results=await Promise.all(inputs.map(async x=>{const r=await call(x);assert.equal(r.status,200);return r.json();}));
+ assert.deepEqual(results[0],results[2]);assert.notEqual(results[0].houses.asc,results[1].houses.asc);
+});
+test('HTTP method and route contracts',async()=>{
+ assert.equal((await worker.fetch('/missing')).status,404);
+ const method=await worker.fetch('/calculate');assert.equal(method.status,405);assert.equal(method.headers.get('Allow'),'POST, OPTIONS');
+ const preflight=await worker.fetch('/calculate',{method:'OPTIONS'});assert.equal(preflight.status,204);assert.equal(await preflight.text(),'');
+});
+test('real WASM without ephemeris files is rejected',async()=>{
+ const missing=await unstable_dev('test/fixtures/missing-data-worker.js',{config:'wrangler.jsonc',local:true,port:0,experimental:{disableExperimentalWarning:true}});
+ try {
+  const r=await missing.fetch('/');assert.equal(r.status,422);
+  assert.equal((await r.json()).error,'EPHEMERIS_FALLBACK_REJECTED');
+ } finally {await missing.stop();}
 });

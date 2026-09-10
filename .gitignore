@@ -4,3 +4,6 @@ dist/
 .dev.vars*
 .env*
 *.log
+.generated/
+worker-configuration.d.ts
+.local-config/

@@ -1,3 +1,5 @@
+> この報告は組み込み前の検証記録です。組み込み後のAPI・テスト・残課題はリポジトリのREADMEを参照してください。
+
 # K08 Swiss Ephemeris WASM互換性検証
 
 検証日: 2026-09-10
@@ -91,4 +93,3 @@ C/WASMバイナリ自体は変更していない。Node専用のmountEphemerisDi
 - [公式ネイティブ比較実行版](https://github.com/aloistr/swisseph/tree/master/windows/programs)
 - [CloudflareのWASM読み込み方式](https://developers.cloudflare.com/workers/runtime-apis/webassembly/javascript/)
 - [Cloudflareの制限](https://developers.cloudflare.com/workers/platform/limits/)
-

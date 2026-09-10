@@ -1,16 +1,25 @@
 {
   "name": "uranai-ai-k08-runtime",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
-  "description": "Cloudflare Workers runtime shell for K08 Swiss Ephemeris integration",
+  "description": "Cloudflare Workers Swiss Ephemeris engine adapter for K08",
   "license": "AGPL-3.0-only",
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev": "wrangler dev",
-    "test": "node --test",
+    "test": "node --test test/*.test.js",
+    "prepare:runtime": "node scripts/prepare-runtime.mjs",
     "build": "wrangler deploy --dry-run --outdir dist",
     "deploy": "wrangler deploy"
   },
-  "devDependencies": { "wrangler": "4.130.0" }
+  "devDependencies": {
+    "wrangler": "4.130.0"
+  },
+  "dependencies": {
+    "@kuntay/swisseph": "0.2.2",
+    "@kuntay/swisseph-data": "0.2.2"
+  }
 }
