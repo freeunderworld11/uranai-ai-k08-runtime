@@ -3,6 +3,7 @@ import {adaptK02} from './k02-adapter.js';
 import {BODIES, calculateWith, CalculationError} from './calculation.js';
 import {refineSignBoundaries,signIndex} from './sign-boundaries.js';
 import {checkRangeConsistency} from './range-consistency.js';
+import {calculateAspectRange} from './aspect-range.js';
 
 // This envelope is an adapter extension, not part of the canonical K02 fields.
 export function adaptRange(input) {
@@ -53,7 +54,8 @@ export function calculateRangeWith(swe,gate) {
     ...gate.consistency,
     result_status:summary.some(p=>p.status!=='UNAVAILABLE')?'PARTIAL':'UNAVAILABLE',
     time_status:'CONDITIONAL',positions:summary,sample_count:intervals+1,max_sample_spacing_seconds:300,
+    aspects:calculateAspectRange(cache,toUTC),
     evaluated_sample_count:cache.size,max_evaluated_samples:2048,boundary_bracket_tolerance_seconds:1,search_budget_exhausted:budgetExhausted,
     houses:{status:'UNAVAILABLE_TIME_RANGE',asc_status:'UNAVAILABLE',mc_status:'UNAVAILABLE'},
-    limitations:[...new Set(gate.endpoints.flatMap(e=>e.limitations)),...gate.consistency.range_consistency_limitations,'SAMPLED_SIGN_AGREEMENT_IS_NOT_PROOF','BOUNDARY_BRACKET_WIDTH_IS_NOT_ABSOLUTE_TIME_ACCURACY','HOUSE_AND_ASPECT_RANGE_VALIDATION_PENDING',...(budgetExhausted?['BOUNDARY_SEARCH_BUDGET_EXHAUSTED']:[])]};
+    limitations:[...new Set(gate.endpoints.flatMap(e=>e.limitations)),...gate.consistency.range_consistency_limitations,'SAMPLED_SIGN_AGREEMENT_IS_NOT_PROOF','BOUNDARY_BRACKET_WIDTH_IS_NOT_ABSOLUTE_TIME_ACCURACY','HOUSE_RANGE_VALIDATION_PENDING','ASPECT_RANGE_CERTIFICATION_PENDING',...(budgetExhausted?['BOUNDARY_SEARCH_BUDGET_EXHAUSTED']:[])]};
 }
