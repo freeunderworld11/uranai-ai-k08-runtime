@@ -4,6 +4,7 @@ import {BODIES, calculateWith, CalculationError} from './calculation.js';
 import {refineSignBoundaries,signIndex} from './sign-boundaries.js';
 import {checkRangeConsistency} from './range-consistency.js';
 import {calculateAspectRange} from './aspect-range.js';
+import {refineAspectBoundaries} from './aspect-boundaries.js';
 
 // This envelope is an adapter extension, not part of the canonical K02 fields.
 export function adaptRange(input) {
@@ -45,6 +46,11 @@ export function calculateRangeWith(swe,gate) {
   const start=Date.parse(gate.input_echo.start_utc);
   const toUTC=offset=>new Date(Math.round(start+offset)).toISOString();
   summary.forEach((p,b)=>Object.assign(p,refineSignBoundaries(times,evaluate,b,toUTC)));
+  const aspectBoundaries=refineAspectBoundaries([...cache.keys()].sort((a,b)=>a-b),evaluate,toUTC);
+  const aspects=calculateAspectRange(cache,toUTC);
+  aspects.pairs.forEach((p,i)=>Object.assign(p,aspectBoundaries[i]));
+  aspects.method='SAMPLED_STATES_WITH_BRACKET_REFINEMENT';
+  aspects.limitations=['SAMPLED_ASPECT_AGREEMENT_IS_NOT_PROOF','ASPECT_BOUNDARY_WIDTH_IS_NOT_ABSOLUTE_TIME_ACCURACY'];
   for(const p of summary) {
     if(p.observed_sign_indices.length>1){p.status='TIME_DEPENDENT';p.SIGN_TIME_DEPENDENT=true;p.SIGN_STABLE_WITHOUT_TIME=false;}
     else if(p.failed_sample_count)p.status='UNAVAILABLE';
@@ -54,7 +60,7 @@ export function calculateRangeWith(swe,gate) {
     ...gate.consistency,
     result_status:summary.some(p=>p.status!=='UNAVAILABLE')?'PARTIAL':'UNAVAILABLE',
     time_status:'CONDITIONAL',positions:summary,sample_count:intervals+1,max_sample_spacing_seconds:300,
-    aspects:calculateAspectRange(cache,toUTC),
+    aspects,
     evaluated_sample_count:cache.size,max_evaluated_samples:2048,boundary_bracket_tolerance_seconds:1,search_budget_exhausted:budgetExhausted,
     houses:{status:'UNAVAILABLE_TIME_RANGE',asc_status:'UNAVAILABLE',mc_status:'UNAVAILABLE'},
     limitations:[...new Set(gate.endpoints.flatMap(e=>e.limitations)),...gate.consistency.range_consistency_limitations,'SAMPLED_SIGN_AGREEMENT_IS_NOT_PROOF','BOUNDARY_BRACKET_WIDTH_IS_NOT_ABSOLUTE_TIME_ACCURACY','HOUSE_RANGE_VALIDATION_PENDING','ASPECT_RANGE_CERTIFICATION_PENDING',...(budgetExhausted?['BOUNDARY_SEARCH_BUDGET_EXHAUSTED']:[])]};

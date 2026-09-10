@@ -35,6 +35,9 @@ test('explicit K02 range runs in Workers without selecting a birth instant',asyn
  assert.equal(b.aspects.scope,'EXPLICIT_UTC_RANGE');assert.equal(b.aspects.pair_count,45);
  assert.equal(b.aspects.evaluated_sample_count,b.evaluated_sample_count);
  assert.ok(b.aspects.pairs.every(p=>p.STABLE_WITHOUT_TIME!==true));
+ const transitions=b.aspects.pairs.flatMap(p=>p.transition_brackets);
+ assert.ok(transitions.length>0);assert.ok(transitions.every(t=>t.width_seconds<=1&&t.from_state!==t.to_state));
+ assert.equal(b.aspects.method,'SAMPLED_STATES_WITH_BRACKET_REFINEMENT');
 });
 test('K02 UTC conversion matches JD and supports planets without geography',async()=>{
  const r=await callK02(k02);assert.equal(r.status,200);const b=await r.json();
