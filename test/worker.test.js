@@ -80,9 +80,12 @@ test('Swiss positions match the recorded native reference',async()=>{
  }
 });
 test('polar Placidus fallback preserves all normal planets',async()=>{
+ const reference=await (await call({...input,latitude:69.6492,longitude:18.9553})).json();
+ assert.ok(Math.abs(reference.houses.asc-299.0790476)<1e-6);assert.ok(Math.abs(reference.houses.mc-297.3499015)<1e-6);
+ assert.equal(reference.houses.cusps,undefined);assert.ok(reference.positions.every(p=>p.house===null));
  const r=await call({...input,latitude:80});assert.equal(r.status,200);
  const b=await r.json();assert.equal(b.houses.status,'UNAVAILABLE_PLACIDUS');assert.equal(b.calculation_performed,true);assert.equal(b.valid_planet_count,10);
- assert.equal(b.runtime_status,'PARTIAL_RESULT');assert.equal(b.houses.cusps,undefined);assert.equal(b.houses.asc,undefined);
+ assert.equal(b.runtime_status,'PARTIAL_RESULT');assert.equal(b.houses.cusps,undefined);assert.equal(b.houses.asc_status,'CONDITIONAL');
  const normal=await (await call()).json();assert.deepEqual(planetCore(b.positions),planetCore(normal.positions));
 });
 test('date boundaries and invalid coordinates',async()=>{

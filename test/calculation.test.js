@@ -21,7 +21,7 @@ test('recognized per-body error continues, missing flags and traps abort globall
 });
 test('no valid data is not reported as success',()=>{
  const e=engine(()=>({...good,ephemeris:'moshier',returnFlags:260}));
- e.houses=()=>({requestedSystem:'P',returnFlags:-1,substituted:true});
+ e.houses=(jd,lat,lon,system)=>({requestedSystem:system,returnFlags:-1,substituted:true});
  const r=calculateWith(e,input);assert.equal(r.result_status,'UNAVAILABLE');assert.equal(r.ephemeris_mode,null);
 });
 test('nonfinite input is rejected',()=>{

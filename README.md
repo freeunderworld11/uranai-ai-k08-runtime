@@ -72,7 +72,7 @@ Content-Type: application/json
 - `k08_deployment_gate: PENDING`
 
 内部でMoshier等に切り替わった場合、return flag不一致、警告や非有限値は該当天体だけをUNAVAILABLEにし、その数値を返しません。他の正常な天体はVALIDとして残します。positionsは常に10天体の順序を保ち、失敗項目にはstatus・error・取得できたreturn_flagを記録します。
-Placidus失敗時はhouses.statusをUNAVAILABLE_PLACIDUSとし、代替カスプを返しません。正常な天体は保持します。ASC/MCの独立検証は未実装のため、ハウス失敗時は両方をUNAVAILABLEとして留保します。
+Placidus失敗時はhouses.statusをUNAVAILABLE_PLACIDUSとし、代替カスプを返しません。正常な天体は保持します。ASC/MCは下記の条件付き照合に一致した項目だけを保持します。
 
 正常な項目が一つでもあればHTTP 200、result_status: PARTIAL、runtime_status: PARTIAL_RESULT、calculation_performed: trueで返します。すべて正常ならCOMPLETE/CALCULATEDです。HTTP 200だけで完全な出生図と判断せず、各項目のstatusを確認してください。
 全項目が利用不可なら422、result_status: UNAVAILABLE、calculation_performed: falseです。このfalseは利用可能な結果がないという意味で、拒否検出の内部計算は行われる場合があります。
@@ -177,3 +177,11 @@ K08正本の要件照合と正式I/O、時刻変換・監査情報、実環境�
 距離方式はMINIMUM_ECLIPTIC_LONGITUDE_SEPARATIONと明示します。これは補足情報であり、黄緯を含むswe_house_posの所属判定や空間的なハウス境界距離と同一ではありません。所属を変更せず、二重所属や隣のハウスの解釈を自動確定しません。K08第74節は距離の具体的方式を規定していないため、正式監査での確認事項として残します。
 
 ハウス・天体の失敗時は感度をnullとし、境界データが欠ける場合もfalseと取り違えません。今回追加後、全49テストとビルドが成功しました。本番承認はPENDINGです。
+
+## 高緯度のASC・MC確認
+
+Placidusが負の返却コードで代替計算になった場合、同じ日時・場所のE方式を角度照合にだけ使います。ASC・MCをそれぞれ比較し、正常な返却コード・警告なし・有限の0以上360未満の角度で、最小角差1e-7度以内ならCONDITIONALとして保持します。一方だけ不一致なら、その項目だけを留保します。緯度±90度は留保します。E方式のカスプと所属ハウスは採用しません。
+
+同じエンジンの計算法間の一致であり、独立エンジンによる認証ではありません。house.statusはUNAVAILABLE_PLACIDUS、systemはnullのままです。基盤のメタデータ破損や未知の例外は全体停止します。
+
+公式swetest64 2.10.03、JD2451545、東経18.9553・北緯69.6492、P/EでASC=299.0790476、MC=297.3499015を確認し、Workers結果と差1e-6度未満で一致しました。全51テストとビルドが成功。本番承認・全高緯度条件の正式監査は未完了です。

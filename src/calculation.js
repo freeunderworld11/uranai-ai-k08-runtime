@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
+import {checkPolarAngles} from './polar-angles.js';
 export class CalculationError extends Error {
   constructor(code, status = 422) { super(code); this.code = code; this.status = status; }
 }
@@ -46,9 +47,14 @@ export function calculateWith(swe, input, {skipHouses=false} = {}) {
   const houses = skipHouses ? {system:null,system_requested:'PLACIDUS',status:'UNAVAILABLE_GEO',asc_status:'UNAVAILABLE',mc_status:'UNAVAILABLE'} : validHouses
     ? {system:'PLACIDUS',status:'VALID',armc:h.armc,asc:h.ascendant,mc:h.midheaven,cusps:h.cusps,return_flag:h.returnFlags}
     : {system:null,system_requested:'PLACIDUS',status:'UNAVAILABLE_PLACIDUS',return_flag:h?.returnFlags??null,fallback_detected:h?.substituted??false,asc_status:'UNAVAILABLE',mc_status:'UNAVAILABLE',limitation:'Independent ASC/MC validation after house failure is not implemented.'};
+  if(!skipHouses&&!validHouses) {
+    try {Object.assign(houses,checkPolarAngles(swe,input,h));}
+    catch(error){if(!engineError(error,'swe_houses_ex2'))globalFailure();}
+    houses.limitation='ASC/MC are conditional only when P and E angle fields agree; alternative cusps are discarded. Not independent-engine certification.';
+  }
   const deltaT = swe.deltaT(jd_ut,'swiss') * 86400;
   finite([deltaT]);
   const validCount = positions.filter(p=>p.status==='VALID').length;
-  const resultStatus = validCount===10 && validHouses ? 'COMPLETE' : validCount>0 || validHouses ? 'PARTIAL' : 'UNAVAILABLE';
+  const resultStatus = validCount===10 && validHouses ? 'COMPLETE' : validCount>0 || validHouses || houses.asc_status==='CONDITIONAL' || houses.mc_status==='CONDITIONAL' ? 'PARTIAL' : 'UNAVAILABLE';
   return {result_status:resultStatus,valid_planet_count:validCount,jd_ut,delta_t_seconds:deltaT,ephemeris_mode:validCount ? 'SWISS_EPHEMERIS' : null,runtime_version:swe.version,ephemeris_data_version:'@kuntay/swisseph-data@0.2.2',calc_flags:FLAGS,coordinate_system:'GEOCENTRIC_TROPICAL_ECLIPTIC_OF_DATE',positions,houses};
 }
