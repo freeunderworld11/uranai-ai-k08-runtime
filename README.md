@@ -282,3 +282,8 @@ POST /calculate/solar-boundary はK08_SOLAR_LONGITUDE_BOUNDARY_SERVICE_v1の開�
 
 [水星逆行ケースの条件](docs/CASE_H.md)と固定参照値を追加しました。負の水星速度とRETROGRADE、全出生図参照値を照合し、全84テストが成功しました。station感度は未認証、本番承認は保留です。
 
+
+## CASE_I固定回帰テスト
+
+[留付近の検証条件](docs/CASE_I.md)と水星の速度符号反転前後2入力を追加しました。小さい速度をゼロに丸めず、留感度は未認証のまま保持します。全86テスト成功。本番承認は保留です。
+
